@@ -279,3 +279,19 @@ func (nav *Navigator) Close() {
 	nav.Cancel()
 	nav.Logger.Println("Navigator instance closed successfully")
 }
+
+// GetCurrentURL extracts the current URL from the browser
+// Returns the current URL as a string and an error if any
+func (nav *Navigator) GetCurrentURL() (string, error) {
+	nav.Logger.Println("Extracting the current URL")
+	var currentURL string
+	err := chromedp.Run(nav.Ctx,
+		chromedp.Location(&currentURL),
+	)
+	if err != nil {
+		nav.Logger.Printf("Failed to extract current URL: %v\n", err)
+		return "", fmt.Errorf("failed to extract current URL: %v", err)
+	}
+	nav.Logger.Println("Current URL extracted successfully")
+	return currentURL, nil
+}

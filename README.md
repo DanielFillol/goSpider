@@ -13,7 +13,7 @@ go get -u github.com/chromedp/chromedp
 Importing the Library
 First, import the library in your Go project:
 ```sh
-import "path/to/webnav"
+import "DanielFillol/goSpider"
 ```
 ## Example Usage
 Here's an example of how to use the library:

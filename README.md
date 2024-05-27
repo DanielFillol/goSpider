@@ -7,6 +7,7 @@ To use this library, you need to install the `chromedp` package:
 
 ```sh
 go get -u github.com/chromedp/chromedp
+go get -u github.com/DanielFillol/goSpider
 ```
 
 ## Usage

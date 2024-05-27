@@ -13,6 +13,7 @@ func StartTestServer() *http.Server {
 			<html>
 			<head><title>Test Page</title></head>
 			<body>
+				<a href="/page2" id="linkToPage2">Go to Page 2</a>
 				<button id="exampleButton" onclick="showDynamicContent()">Click Me</button>
 				<form id="searchForm">
 					<input type="text" id="searchBar" />
@@ -64,6 +65,20 @@ func StartTestServer() *http.Server {
 			</html>
 		`))
 	})
+
+	mux.HandleFunc("/page2", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`
+			<!DOCTYPE html>
+			<html>
+			<head><title>Page 2</title></head>
+			<body>
+				<a href="/" id="linkToPage1">Go to Page 1</a>
+				<p>This is Page 2</p>
+			</body>
+			</html>
+		`))
+	})
+
 	server := &http.Server{Addr: ":8080", Handler: mux}
 	go server.ListenAndServe()
 	return server

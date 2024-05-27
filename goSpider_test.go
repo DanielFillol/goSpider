@@ -148,3 +148,45 @@ func TestWaitForAJAX(t *testing.T) {
 		t.Errorf("WaitForAJAX error: %v", err)
 	}
 }
+
+// TestGetCurrentURL tests extracting the current URL from the browser
+func TestGetCurrentURL(t *testing.T) {
+	// Navigate to the main page
+	htmlContent, err := nav.FetchHTML("http://localhost:8080")
+	if err != nil {
+		t.Errorf("FetchHTML error: %v", err)
+	}
+	if htmlContent == "" {
+		t.Error("FetchHTML returned empty content")
+	}
+
+	// Extract and verify the current URL
+	currentURL, err := nav.GetCurrentURL()
+	if err != nil {
+		t.Errorf("GetCurrentURL error: %v", err)
+	}
+
+	expectedURL := "http://localhost:8080/"
+	if currentURL != expectedURL {
+		t.Errorf("Expected URL: %s, but got: %s", expectedURL, currentURL)
+	}
+
+	// Navigate to page 2
+	err = nav.ClickButton("#linkToPage2")
+	if err != nil {
+		t.Errorf("ClickButton error: %v", err)
+	}
+
+	time.Sleep(2 * time.Second) // Wait for navigation to complete
+
+	// Extract and verify the current URL for page 2
+	currentURL, err = nav.GetCurrentURL()
+	if err != nil {
+		t.Errorf("GetCurrentURL error: %v", err)
+	}
+
+	expectedURL = "http://localhost:8080/page2"
+	if currentURL != expectedURL {
+		t.Errorf("Expected URL: %s, but got: %s", expectedURL, currentURL)
+	}
+}

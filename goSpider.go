@@ -3,6 +3,7 @@ package goSpider
 import (
 	"context"
 	"fmt"
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 	"log"
@@ -20,7 +21,7 @@ type Navigator struct {
 // NewNavigator creates a new Navigator instance
 func NewNavigator() *Navigator {
 	ctx, cancel := chromedp.NewContext(context.Background())
-	logger := log.New(os.Stdout, "webnav: ", log.LstdFlags)
+	logger := log.New(os.Stdout, "goSpider: ", log.LstdFlags)
 	return &Navigator{
 		Ctx:    ctx,
 		Cancel: cancel,
@@ -294,4 +295,64 @@ func (nav *Navigator) GetCurrentURL() (string, error) {
 	}
 	nav.Logger.Println("Current URL extracted successfully")
 	return currentURL, nil
+}
+
+// FindElements finds multiple elements identified by the given selector and returns their outer HTML
+// selector: the CSS selector of the elements to find
+// Returns a slice of outer HTML strings for each element and an error if any
+func (nav *Navigator) FindElements(selector string) ([]string, error) {
+	nav.Logger.Printf("Finding elements with selector: %s\n", selector)
+	var nodes []*cdp.Node
+	err := chromedp.Run(nav.Ctx,
+		chromedp.Nodes(selector, &nodes, chromedp.ByQueryAll),
+	)
+	if err != nil {
+		nav.Logger.Printf("Failed to find elements: %v\n", err)
+		return nil, fmt.Errorf("failed to find elements: %v", err)
+	}
+
+	var outerHTMLs []string
+	for _, node := range nodes {
+		var outerHTML string
+		err = chromedp.Run(nav.Ctx,
+			chromedp.OuterHTML(fmt.Sprintf("#%s", node.AttributeValue("id")), &outerHTML, chromedp.NodeVisible),
+		)
+		if err != nil {
+			nav.Logger.Printf("Failed to get outer HTML for node: %v\n", err)
+			return nil, fmt.Errorf("failed to get outer HTML for node: %v", err)
+		}
+		outerHTMLs = append(outerHTMLs, outerHTML)
+	}
+
+	nav.Logger.Println("Elements found successfully")
+	return outerHTMLs, nil
+}
+
+// FindElement finds multiple elements identified by the given selector and returns their outer HTML
+// selector: the CSS selector of the elements to find
+// Returns a slice of outer HTML strings for each element and an error if any
+func (nav *Navigator) FindElement(selector string) (string, error) {
+	nav.Logger.Printf("Finding elements with selector: %s\n", selector)
+	var nodes []*cdp.Node
+	err := chromedp.Run(nav.Ctx,
+		chromedp.Nodes(selector, &nodes, chromedp.ByQueryAll),
+	)
+	if err != nil {
+		nav.Logger.Printf("Failed to find elements: %v\n", err)
+		return "", fmt.Errorf("failed to find elements: %v", err)
+	}
+
+	var outerHTML string
+	for _, node := range nodes {
+		err = chromedp.Run(nav.Ctx,
+			chromedp.OuterHTML(fmt.Sprintf("#%s", node.AttributeValue("id")), &outerHTML, chromedp.NodeVisible),
+		)
+		if err != nil {
+			nav.Logger.Printf("Failed to get outer HTML for node: %v\n", err)
+			return outerHTML, fmt.Errorf("failed to get outer HTML for node: %v", err)
+		}
+	}
+
+	nav.Logger.Println("Elements found successfully")
+	return outerHTML, nil
 }

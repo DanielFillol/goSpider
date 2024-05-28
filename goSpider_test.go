@@ -190,3 +190,60 @@ func TestGetCurrentURL(t *testing.T) {
 		t.Errorf("Expected URL: %s, but got: %s", expectedURL, currentURL)
 	}
 }
+
+// TestFindElement tests extracting the selected a single element from a node
+func TestFindElement(t *testing.T) {
+	// Start the test server
+	server := StartTestServer()
+	defer server.Close()
+
+	// Give the server a moment to start
+	time.Sleep(1 * time.Second)
+
+	// Create a new navigator instance
+	nav := NewNavigator()
+	defer nav.Close()
+
+	_, err := nav.FetchHTML("http://localhost:8080")
+	if err != nil {
+		t.Errorf("FetchHTML error: %v", err)
+	}
+
+	// Test finding a single element
+	elementHTML, err := nav.FindElement("#exampleButton")
+	if err != nil {
+		t.Errorf("FindElement error: %v", err)
+	}
+
+	if elementHTML == "" {
+		t.Error("FindElement returned empty content")
+	}
+}
+
+// TestFindElements  tests extracting the selected a group of elements from a node
+func TestFindElements(t *testing.T) {
+	// Start the test server
+	server := StartTestServer()
+	defer server.Close()
+
+	// Give the server a moment to start
+	time.Sleep(1 * time.Second)
+
+	// Create a new navigator instance
+	nav := NewNavigator()
+	defer nav.Close()
+
+	_, err := nav.FetchHTML("http://localhost:8080")
+	if err != nil {
+		t.Errorf("FetchHTML error: %v", err)
+	}
+
+	// Test finding multiple elements
+	elementsHTML, err := nav.FindElements("#exampleButton")
+	if err != nil {
+		t.Errorf("FindElements error: %v", err)
+	}
+	if len(elementsHTML) == 0 {
+		t.Error("FindElements returned no elements")
+	}
+}

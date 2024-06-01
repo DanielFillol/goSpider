@@ -38,8 +38,8 @@ func main() {
 
 	usernameSelector := "#usernameForm"
 	passwordSelector := "#passwordForm"
-	username := "363.400.878-41"
-	password := "Remoto123*"
+	username := "123.456.789-10"
+	password := "Senha 123"
 	loginButtonSelector := "#pbEntrar"
 	messageFailedSuccess := "#mensagemRetorno > li"
 

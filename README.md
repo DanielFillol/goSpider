@@ -22,158 +22,229 @@ Here's an example of how to use the library:
 package main
 
 import (
-    "fmt"
-    "webnav"
-    "time"
+	"fmt"
+	"github.com/DanielFillol/goSpider"
+	"log"
 )
 
 func main() {
-    nav := webnav.NewNavigator()
-    defer nav.Close()
+	url := "https://esaj.tjsp.jus.br/sajcas/login"
+	nav := goSpider.NewNavigator()
+	defer nav.Close()
 
-    url := "https://example.com"
-    htmlContent, err := nav.FetchHTML(url)
-    if err != nil {
-        fmt.Printf("Error fetching HTML: %v\n", err)
-        return
-    }
+	err := nav.OpenURL(url)
+	if err != nil {
+		log.Printf("OpenURL error: %v", err)
+	}
 
-    fmt.Println("HTML content fetched.")
+	usernameSelector := "#usernameForm"
+	passwordSelector := "#passwordForm"
+	username := "363.400.878-41"
+	password := "Remoto123*"
+	loginButtonSelector := "#pbEntrar"
+	messageFailedSuccess := "#mensagemRetorno > li"
 
-    // Example of clicking a button
-    err = nav.ClickButton("#exampleButton")
-    if err != nil {
-        fmt.Printf("Error clicking button: %v\n", err)
-        return
-    }
+	err = nav.Login(url, username, password, usernameSelector, passwordSelector, loginButtonSelector, messageFailedSuccess)
+	if err != nil {
+		log.Printf("Login error: %v", err)
+	}
 
-    time.Sleep(2 * time.Second) // Wait for the action to complete
+	err = nav.ClickButton("#esajConteudoHome > table:nth-child(7) > tbody > tr > td.esajCelulaDescricaoServicos > a")
+	if err != nil {
+		log.Printf("ClickButton error: %v", err)
+	}
 
-    // Example of using a search bar
-    err = nav.FillSearchBar("#searchBar", "example query")
-    if err != nil {
-        fmt.Printf("Error filling search bar: %v\n", err)
-        return
-    }
+	err = nav.ClickButton("#esajConteudoHome > table:nth-child(3) > tbody > tr > td.esajCelulaDescricaoServicos > a")
+	if err != nil {
+		log.Printf("ClickButton error: %v", err)
+	}
 
-    time.Sleep(2 * time.Second) // Wait for the action to complete
+	err = nav.CheckRadioButton("#interna_NUMPROC > div > fieldset > label:nth-child(5)")
+	if err != nil {
+		log.Printf("ClickButton error: %v", err)
+	}
 
-    // Example of opening a new tab
-    err = nav.OpenNewTab("https://example.com/newtab")
-    if err != nil {
-        fmt.Printf("Error opening new tab: %v\n", err)
-        return
-    }
+	err = nav.FillField("#nuProcessoAntigoFormatado", "1017927-35.2023.8.26.0008")
+	if err != nil {
+		log.Printf("filling field error: %v", err)
+	}
 
-    // Example of extracting links
-    links, err := nav.ExtractLinks()
-    if err != nil {
-        fmt.Printf("Error extracting links: %v\n", err)
-        return
-    }
+	err = nav.ClickButton("#botaoConsultarProcessos")
+	if err != nil {
+		log.Printf("ClickButton error: %v", err)
+	}
 
-    fmt.Println("Links found:")
-    for _, link := range links {
-        fmt.Println(link)
-    }
+	err = nav.ClickElement("#linkmovimentacoes")
+	if err != nil {
+		log.Printf("ClickElement error: %v", err)
+	}
 
-    // Example of extracting text
-    text, err := nav.ExtractText()
-    if err != nil {
-        fmt.Printf("Error extracting text: %v\n", err)
-        return
-    }
+	people, err := nav.ExtractTableData("#tablePartesPrincipais")
+	if err != nil {
+		log.Printf("ExtractTableData error: %v", err)
+	}
 
-    fmt.Println("Text content:")
-    fmt.Println(text)
+	movements, err := nav.ExtractTableData("#tabelaTodasMovimentacoes")
+	if err != nil {
+		log.Printf("ExtractTableData error: %v", err)
+	}
 
-    // Example of filling a form
-    formData := map[string]string{
-        "username": "exampleuser",
-        "password": "examplepass",
-    }
-    err = nav.FillForm("#loginForm", formData)
-    if err != nil {
-        fmt.Printf("Error filling form: %v\n", err)
-        return
-    }
+	cover, err := nav.ExtractDivText("#containerDadosPrincipaisProcesso", "#maisDetalhes")
+	if err != nil {
+		log.Printf("ExtractDivText error: %v", err)
+	}
 
-    // Example of handling a JavaScript alert
-    err = nav.HandleAlert()
-    if err != nil {
-        fmt.Printf("Error handling alert: %v\n", err)
-        return
-    }
+	//movements
+	for rowIndex, row := range movements {
+		fmt.Printf("Row %d:\n", rowIndex)
+		for cellIndex, cell := range row {
+			fmt.Printf("  Cell %d: %s\n", cellIndex, cell["text"])
+			if spans, ok := cell["spans"]; ok {
+				for spanIndex, spanText := range spans.(map[int]string) {
+					fmt.Printf("    Span %d: %s\n", spanIndex, spanText)
+				}
+			}
+		}
+	}
 
-    time.Sleep(2 * time.Second) // Wait for the action to complete
+	//people involved on the lawsuit
+	for rowIndex, row := range people {
+		fmt.Printf("Row %d:\n", rowIndex)
+		for cellIndex, cell := range row {
+			fmt.Printf("  Cell %d: %s\n", cellIndex, cell["text"])
+			if spans, ok := cell["spans"]; ok {
+				for spanIndex, spanText := range spans.(map[int]string) {
+					fmt.Printf("    Span %d: %s\n", spanIndex, spanText)
+				}
+			}
+		}
+	}
 
-    // Example of selecting a dropdown option
-    err = nav.SelectDropdown("#dropdown", "option1")
-    if err != nil {
-        fmt.Printf("Error selecting dropdown option: %v\n", err)
-        return
-    }
+	//lawsuit cover data
+	for key, value := range cover {
+		fmt.Printf("%s: %s\n", key, value)
+	}
 
-    // Example of checking a checkbox
-    err = nav.CheckCheckbox("#checkbox")
-    if err != nil {
-        fmt.Printf("Error checking checkbox: %v\n", err)
-        return
-    }
+	fmt.Println(len(people))
+	fmt.Println(len(movements))
+	fmt.Println(len(cover))
 
-    // Example of unchecking a checkbox
-    err = nav.UncheckCheckbox("#checkbox")
-    if err != nil {
-        fmt.Printf("Error unchecking checkbox: %v\n", err)
-        return
-    }
+	err = nav.CaptureScreenshot()
+	if err != nil {
+		log.Printf("Screenshot error: %v", err)
+	}
 
-    // Example of selecting a radio button
-    err = nav.SelectRadioButton("#radioButton")
-    if err != nil {
-        fmt.Printf("Error selecting radio button: %v\n", err)
-        return
-    }
-
-    // Example of uploading a file
-    err = nav.UploadFile("#fileInput", "/path/to/your/file.txt")
-    if err != nil {
-        fmt.Printf("Error uploading file: %v\n", err)
-        return
-    }
-
-    time.Sleep(2 * time.Second) // Wait for the action to complete
-
-    // Example of waiting for an element to be visible
-    err = nav.WaitForElement("#dynamicElement", 10*time.Second)
-    if err != nil {
-        fmt.Printf("Error waiting for element: %v\n", err)
-        return
-    }
-
-    // Example of waiting for AJAX requests to complete
-    err = nav.WaitForAJAX(5 * time.Second)
-    if err != nil {
-        fmt.Printf("Error waiting for AJAX requests: %v\n", err)
-        return
-    }
 }
 ```
 ## Functions
-- NewNavigator: Creates a new Navigator instance.
-- FetchHTML: Fetches the HTML content of a given URL.
-- ClickButton: Clicks a button identified by the given selector.
-- FillSearchBar: Fills a search bar identified by the given selector and submits the form.
-- OpenNewTab: Opens a new tab with the given URL.
-- ExtractLinks: Extracts all the links from the current page.
-- ExtractText: Extracts all the text content from the current page.
-- FillForm: Fills a form with the provided data.
-- HandleAlert: Handles a JavaScript alert by accepting it.
-- SelectDropdown: Selects an option from a dropdown menu identified by the selector and option value.
-- CheckCheckbox: Checks a checkbox identified by the selector.
-- UncheckCheckbox: Unchecks a checkbox identified by the selector.
-- SelectRadioButton: Selects a radio button identified by the selector.
-- UploadFile: Uploads a file to a file input identified by the selector.
-- WaitForElement: Waits for an element identified by the selector to be visible.
-- WaitForAJAX: Waits for AJAX requests to complete by monitoring the network activity.
-- Close: Closes the Navigator instance.
+Functions Overview
+
+- NewNavigator() *Navigator
+Creates a new instance of the Navigator struct, initializing a new ChromeDP context and logger.
+```go
+nav := goSpider.NewNavigator()
+```
+- Close()
+Closes the Navigator instance and releases resources.
+```go
+nav.Close()
+```
+- OpenNewTab(url string) error
+Opens a new browser tab with the specified URL.
+```go
+err := nav.OpenNewTab("https://www.example.com")
+```
+- OpenURL(url string) error
+Opens the specified URL in the current browser context.
+```go
+err := nav.OpenURL("https://www.example.com")
+```
+- GetCurrentURL() (string, error)
+Returns the current URL of the browser.
+```go
+currentURL, err := nav.GetCurrentURL()
+```
+- Login(url, username, password, usernameSelector, passwordSelector, loginButtonSelector string, messageFailedSuccess string) error
+Logs into a website using the provided credentials and selectors.
+```go
+err := nav.Login("https://www.example.com/login", "username", "password", "#username", "#password", "#login-button", "Login failed")
+```
+- CaptureScreenshot() error
+Captures a screenshot of the current browser window and saves it as screenshot.png.
+```go
+err := nav.CaptureScreenshot()
+```
+- GetElement(selector string) (string, error)
+Retrieves the text content of an element specified by the selector.
+```go
+text, err := nav.GetElement("#elementID")
+```
+- WaitForElement(selector string, timeout time.Duration) error
+Waits for an element specified by the selector to be visible within the given timeout.
+```go
+err := nav.WaitForElement("#elementID", 5*time.Second)
+```
+- ClickButton(selector string) error
+Clicks a button specified by the selector.
+```go
+err := nav.ClickButton("#buttonID")
+```
+- ClickElement(selector string) error
+Clicks an element specified by the selector.
+```go
+err := nav.ClickElement("#elementID")
+```
+- CheckRadioButton(selector string) error
+Selects a radio button specified by the selector.
+```go
+err := nav.CheckRadioButton("#radioButtonID")
+```
+- UncheckRadioButton(selector string) error
+Unchecks a checkbox specified by the selector.
+```go
+err := nav.UncheckRadioButton("#checkboxID")
+```
+- FillField(selector string, value string) error
+Fills a field specified by the selector with the provided value.
+```go
+err := nav.FillField("#fieldID", "value")
+```
+- ExtractTableData(selector string) ([]map[int]map[string]interface{}, error)
+Extracts data from a table specified by the selector.
+```go
+tableData, err := nav.ExtractTableData("#tableID")
+```
+- ExtractDivText(parentSelectors ...string) (map[string]string, error)
+Extracts text content from divs specified by the parent selectors.
+```go
+textData, err := nav.ExtractDivText("#parent1", "#parent2")
+```
+- FetchHTML(url string) (string, error)
+Fetches the HTML content of the specified URL.
+```go
+htmlContent, err := nav.FetchHTML("https://www.example.com")
+```
+- ExtractLinks() ([]string, error)
+Extracts all links from the current page.
+```go
+links, err := nav.ExtractLinks()
+```
+- FillForm(formSelector string, data map[string]string) error
+Fills out a form specified by the selector with the provided data and submits it.
+```go
+formData := map[string]string{
+    "username": "myUsername",
+    "password": "myPassword",
+}
+err := nav.FillForm("#loginForm", formData)
+```
+- HandleAlert() error
+Handles JavaScript alerts by accepting them.
+```go
+err := nav.HandleAlert()
+```
+- SelectDropdown(selector, value string) error
+Selects an option in a dropdown specified by the selector and value.
+```go
+err := nav.SelectDropdown("#dropdownID", "optionValue")
+```

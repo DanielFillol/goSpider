@@ -3,7 +3,7 @@
 
 ## Installation
 
-To use this library, you need to install the `chromedp` package:
+To use this library, you need to install:
 
 ```sh
 go get -u github.com/DanielFillol/goSpider

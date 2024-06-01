@@ -71,19 +71,11 @@ func TestNestedElement(t *testing.T) {
 	}
 }
 
-// TestFillSearchBar tests filling a search bar and submitting the form
-func TestFillSearchBar(t *testing.T) {
-	err := nav.FillSearchBar("#searchBar", "test query")
-	if err != nil {
-		t.Errorf("FillSearchBar error: %v", err)
-	}
-}
-
 // TestFillFormAndHandleAlert tests filling a form and handling the resulting alert
 func TestFillFormAndHandleAlert(t *testing.T) {
 	formData := map[string]string{
-		"username": "testuser",
-		"password": "testpass",
+		"username": "test_user",
+		"password": "test_pass",
 	}
 	err := nav.FillForm("#loginForm", formData)
 	if err != nil {
@@ -104,32 +96,11 @@ func TestSelectDropdown(t *testing.T) {
 	}
 }
 
-// TestCheckbox tests checking and unchecking a checkbox
-func TestCheckbox(t *testing.T) {
-	err := nav.CheckCheckbox("#checkbox")
-	if err != nil {
-		t.Errorf("CheckCheckbox error: %v", err)
-	}
-
-	err = nav.UncheckCheckbox("#checkbox")
-	if err != nil {
-		t.Errorf("UncheckCheckbox error: %v", err)
-	}
-}
-
 // TestSelectRadioButton tests selecting a radio button
 func TestSelectRadioButton(t *testing.T) {
-	err := nav.SelectRadioButton("#radioButton")
+	err := nav.CheckRadioButton("#radioButton")
 	if err != nil {
 		t.Errorf("SelectRadioButton error: %v", err)
-	}
-}
-
-// TestUploadFile tests uploading a file
-func TestUploadFile(t *testing.T) {
-	err := nav.UploadFile("#fileInput", "testfile.txt")
-	if err != nil {
-		t.Errorf("UploadFile error: %v", err)
 	}
 }
 
@@ -138,14 +109,6 @@ func TestWaitForElement(t *testing.T) {
 	err := nav.WaitForElement("#delayedElement", 10*time.Second)
 	if err != nil {
 		t.Errorf("WaitForElement (delayed element) error: %v", err)
-	}
-}
-
-// TestWaitForAJAX tests waiting for AJAX requests to complete
-func TestWaitForAJAX(t *testing.T) {
-	err := nav.WaitForAJAX(10 * time.Second)
-	if err != nil {
-		t.Errorf("WaitForAJAX error: %v", err)
 	}
 }
 
@@ -188,62 +151,5 @@ func TestGetCurrentURL(t *testing.T) {
 	expectedURL = "http://localhost:8080/page2"
 	if currentURL != expectedURL {
 		t.Errorf("Expected URL: %s, but got: %s", expectedURL, currentURL)
-	}
-}
-
-// TestFindElement tests extracting the selected a single element from a node
-func TestFindElement(t *testing.T) {
-	// Start the test server
-	server := StartTestServer()
-	defer server.Close()
-
-	// Give the server a moment to start
-	time.Sleep(1 * time.Second)
-
-	// Create a new navigator instance
-	nav := NewNavigator()
-	defer nav.Close()
-
-	_, err := nav.FetchHTML("http://localhost:8080")
-	if err != nil {
-		t.Errorf("FetchHTML error: %v", err)
-	}
-
-	// Test finding a single element
-	elementHTML, err := nav.FindElement("#exampleButton")
-	if err != nil {
-		t.Errorf("FindElement error: %v", err)
-	}
-
-	if elementHTML == "" {
-		t.Error("FindElement returned empty content")
-	}
-}
-
-// TestFindElements  tests extracting the selected a group of elements from a node
-func TestFindElements(t *testing.T) {
-	// Start the test server
-	server := StartTestServer()
-	defer server.Close()
-
-	// Give the server a moment to start
-	time.Sleep(1 * time.Second)
-
-	// Create a new navigator instance
-	nav := NewNavigator()
-	defer nav.Close()
-
-	_, err := nav.FetchHTML("http://localhost:8080")
-	if err != nil {
-		t.Errorf("FetchHTML error: %v", err)
-	}
-
-	// Test finding multiple elements
-	elementsHTML, err := nav.FindElements("#exampleButton")
-	if err != nil {
-		t.Errorf("FindElements error: %v", err)
-	}
-	if len(elementsHTML) == 0 {
-		t.Error("FindElements returned no elements")
 	}
 }

@@ -254,21 +254,19 @@ Selects an option in a dropdown specified by the selector and value.
 ```go
 err := nav.SelectDropdown("#dropdownID", "optionValue")
 ```
-- AsyncRequest(requests []Requests, numberOfWorkers int, duration time.Duration, crawlerFunc func(string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error)) ([]ResponseBody, error)
-Performs web scraping tasks concurrently with a specified number of workers and a delay between requests. The crawlerFunc parameter allows for flexibility in defining the web scraping logic.
+- AsyncRequest(requests []Requests, numberOfWorkers int, duration time.Duration, crawlerFunc func(string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error)) ([]ResponseBody, error) Performs web scraping tasks concurrently with a specified number of workers and a delay between requests. The crawlerFunc parameter allows for flexibility in defining the web scraping logic.
 
-Parameters:
+- 	Parameters:
 requests: A slice of Requests structures containing the data needed for each request.
 numberOfWorkers: The number of concurrent workers to process the requests.
 duration: The delay duration between each request to avoid overwhelming the target server.
 crawlerFunc: A user-defined function that takes a process number as input and returns cover data, movements, people, and an error.
 
-Returns:
+-	Returns:
 A slice of ResponseBody structures containing the results of the web scraping tasks.
 An error if any occurred during the requests.
-
-Example Usage:
-```go
+ 
+ ```go
 // Example crawler function
 crawlerFunc := func(processNumber string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error) {
     // Simulate web scraping logic here

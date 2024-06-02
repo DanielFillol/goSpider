@@ -24,9 +24,44 @@ import (
 	"fmt"
 	"github.com/DanielFillol/goSpider"
 	"log"
+	"time"
 )
 
 func main() {
+	users := []goSpider.Requests{
+		{ProcessNumber: "1017927-35.2023.8.26.0008"},
+		{ProcessNumber: "0002396-75.2013.8.26.0201"},
+		{ProcessNumber: "1551285-50.2021.8.26.0477"},
+		{ProcessNumber: "0015386-82.2013.8.26.0562"},
+		{ProcessNumber: "0007324-95.2015.8.26.0590"},
+		{ProcessNumber: "1545639-85.2023.8.26.0090"},
+		{ProcessNumber: "1557599-09.2021.8.26.0090"},
+		{ProcessNumber: "1045142-72.2021.8.26.0002"},
+		{ProcessNumber: "0208591-43.2009.8.26.0004"},
+		{ProcessNumber: "1017927-35.2023.8.26.0008"},
+		// Add more data as needed
+	}
+
+	numberOfWorkers := 5
+	duration := 2 * time.Second
+
+	results, err := goSpider.AsyncRequest(users, numberOfWorkers, duration, Crawler)
+	if err != nil {
+		log.Fatalf("AsyncRequest error: %v", err)
+	}
+
+	// Process the results
+	for _, result := range results {
+		if result.Error != nil {
+			log.Printf("Error: %v", result.Error)
+		} else {
+			log.Printf("Cover: %v, Movements: %v, People: %v", result.Cover, result.Movements, result.People)
+		}
+	}
+}
+
+func Crawler(d string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error) {
+	fmt.Println("Crawling ", d)
 	url := "https://esaj.tjsp.jus.br/sajcas/login"
 	nav := goSpider.NewNavigator()
 	defer nav.Close()
@@ -34,105 +69,77 @@ func main() {
 	err := nav.OpenURL(url)
 	if err != nil {
 		log.Printf("OpenURL error: %v", err)
+		return nil, nil, nil, err
 	}
 
 	usernameSelector := "#usernameForm"
 	passwordSelector := "#passwordForm"
 	username := "123.456.789-10"
-	password := "Senha 123"
+	password := "senha123*"
 	loginButtonSelector := "#pbEntrar"
 	messageFailedSuccess := "#mensagemRetorno > li"
 
 	err = nav.Login(url, username, password, usernameSelector, passwordSelector, loginButtonSelector, messageFailedSuccess)
 	if err != nil {
 		log.Printf("Login error: %v", err)
+		return nil, nil, nil, err
 	}
 
 	err = nav.ClickButton("#esajConteudoHome > table:nth-child(7) > tbody > tr > td.esajCelulaDescricaoServicos > a")
 	if err != nil {
 		log.Printf("ClickButton error: %v", err)
+		return nil, nil, nil, err
 	}
 
 	err = nav.ClickButton("#esajConteudoHome > table:nth-child(3) > tbody > tr > td.esajCelulaDescricaoServicos > a")
 	if err != nil {
 		log.Printf("ClickButton error: %v", err)
+		return nil, nil, nil, err
 	}
 
 	err = nav.CheckRadioButton("#interna_NUMPROC > div > fieldset > label:nth-child(5)")
 	if err != nil {
-		log.Printf("ClickButton error: %v", err)
+		log.Printf("CheckRadioButton error: %v", err)
+		return nil, nil, nil, err
 	}
 
-	err = nav.FillField("#nuProcessoAntigoFormatado", "1017927-35.2023.8.26.0008")
+	err = nav.FillField("#nuProcessoAntigoFormatado", d)
 	if err != nil {
 		log.Printf("filling field error: %v", err)
+		return nil, nil, nil, err
 	}
 
 	err = nav.ClickButton("#botaoConsultarProcessos")
 	if err != nil {
 		log.Printf("ClickButton error: %v", err)
+		return nil, nil, nil, err
 	}
 
 	err = nav.ClickElement("#linkmovimentacoes")
 	if err != nil {
 		log.Printf("ClickElement error: %v", err)
+		return nil, nil, nil, err
 	}
 
 	people, err := nav.ExtractTableData("#tablePartesPrincipais")
 	if err != nil {
 		log.Printf("ExtractTableData error: %v", err)
+		return nil, nil, nil, err
 	}
 
 	movements, err := nav.ExtractTableData("#tabelaTodasMovimentacoes")
 	if err != nil {
 		log.Printf("ExtractTableData error: %v", err)
+		return nil, nil, nil, err
 	}
 
 	cover, err := nav.ExtractDivText("#containerDadosPrincipaisProcesso", "#maisDetalhes")
 	if err != nil {
 		log.Printf("ExtractDivText error: %v", err)
+		return nil, nil, nil, err
 	}
 
-	//movements
-	for rowIndex, row := range movements {
-		fmt.Printf("Row %d:\n", rowIndex)
-		for cellIndex, cell := range row {
-			fmt.Printf("  Cell %d: %s\n", cellIndex, cell["text"])
-			if spans, ok := cell["spans"]; ok {
-				for spanIndex, spanText := range spans.(map[int]string) {
-					fmt.Printf("    Span %d: %s\n", spanIndex, spanText)
-				}
-			}
-		}
-	}
-
-	//people involved on the lawsuit
-	for rowIndex, row := range people {
-		fmt.Printf("Row %d:\n", rowIndex)
-		for cellIndex, cell := range row {
-			fmt.Printf("  Cell %d: %s\n", cellIndex, cell["text"])
-			if spans, ok := cell["spans"]; ok {
-				for spanIndex, spanText := range spans.(map[int]string) {
-					fmt.Printf("    Span %d: %s\n", spanIndex, spanText)
-				}
-			}
-		}
-	}
-
-	//lawsuit cover data
-	for key, value := range cover {
-		fmt.Printf("%s: %s\n", key, value)
-	}
-
-	fmt.Println(len(people))
-	fmt.Println(len(movements))
-	fmt.Println(len(cover))
-
-	err = nav.CaptureScreenshot()
-	if err != nil {
-		log.Printf("Screenshot error: %v", err)
-	}
-
+	return cover, movements, people, nil
 }
 ```
 ## Functions

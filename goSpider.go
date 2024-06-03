@@ -554,9 +554,49 @@ func (nav *Navigator) SelectDropdown(selector, value string) error {
 	return nil
 }
 
-// AsyncRequest performs web scraping tasks concurrently with a specified number of workers and a delay between requests.
+// ParallelRequests performs web scraping tasks concurrently in batches with a specified number of workers and a delay between requests.
 // The crawlerFunc parameter allows for flexibility in defining the web scraping logic.
-func AsyncRequest(requests []Requests, numberOfWorkers int, duration time.Duration, crawlerFunc func(string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error)) ([]ResponseBody, error) {
+//
+// Parameters:
+// - requests: A slice of Requests structures containing the data needed for each request.
+// - numberOfWorkers: The number of concurrent workers to process the requests.
+// - duration: The delay duration between each request to avoid overwhelming the target server.
+// - crawlerFunc: A user-defined function that takes a process number as input and returns cover data, movements, people, and an error.
+//
+// Returns:
+// - A slice of ResponseBody structures containing the results of the web scraping tasks.
+// - An error if any occurred during the requests.
+//
+// Example Usage:
+//
+//	results, err := goSpider.ParallelRequests(requests, 3, 1*time.Second, crawlerFunc)
+func ParallelRequests(requests []Requests, numberOfWorkers int, duration time.Duration, crawlerFunc func(string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error)) ([]ResponseBody, error) {
+	var resultsSaved int
+	var batchResults []ResponseBody
+	batchSize := len(requests)
+	for i := 0; i < len(requests); i += batchSize {
+		end := i + batchSize
+		if end > len(requests) {
+			end = len(requests)
+		}
+
+		batchRequests := requests[i:end]
+
+		br, err := asyncRequest(batchRequests, numberOfWorkers, duration, crawlerFunc)
+		if err != nil {
+			return nil, fmt.Errorf("failed to make asyncRequest: %v", err)
+		}
+
+		resultsSaved += len(batchResults)
+		batchResults = br
+	}
+
+	return batchResults, nil
+}
+
+// asyncRequest performs web scraping tasks concurrently with a specified number of workers and a delay between requests.
+// The crawlerFunc parameter allows for flexibility in defining the web scraping logic.
+func asyncRequest(requests []Requests, numberOfWorkers int, duration time.Duration, crawlerFunc func(string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error)) ([]ResponseBody, error) {
 	done := make(chan struct{})
 	defer close(done)
 

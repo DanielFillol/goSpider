@@ -18,7 +18,7 @@ import "DanielFillol/goSpider"
 ```
 ## Example Usage
 Here's an example of how to use the library:
-```sh
+```go
 package main
 
 import (
@@ -116,9 +116,80 @@ func Crawler(d string) (map[string]string, []map[int]map[string]interface{}, []m
 	return cover, movements, people, nil
 }
 
-
-
 ```
+## Extration Example
+```go
+	//Lawsuit
+	type Cover struct {
+		Number       string
+		Forum        string
+		Vara         string
+		Type         string
+		Value        string
+		Judge        string
+		Distribution string
+		Class        string
+		Subject      string
+		Control      string
+		Situation    string
+	}
+
+	type Person struct{}
+
+	type Movement struct{}
+
+	type Lawsuit struct {
+		Cover     Cover
+		Persons   []Person
+		Movements []Movement
+	}
+
+	var Lawsuits []Lawsuit
+	for _, result := range results {
+		var c Cover
+		for key, value := range result.Cover {
+			if key == "numeroProcesso" {
+				c.Number = value
+			}
+			if key == "foroProcesso" {
+				c.Forum = value
+			}
+			if key == "numeroControleProcesso" {
+				c.Control = value
+			}
+			if key == "valorAcaoProcesso" {
+				c.Value = value
+			}
+			if key == "dataHoraDistribuicaoProcesso" {
+				c.Distribution = value
+			}
+			if key == "areaProcesso" {
+				c.Type = value
+			}
+			if key == "assuntoProcesso" {
+				c.Subject = value
+			}
+			if key == "labelSituacaoProcesso" {
+				c.Situation = value
+			}
+			if key == "varaProcesso" {
+				c.Vara = value
+			}
+			if key == "juizProcesso" {
+				c.Judge = value
+			}
+			if key == "classeProcesso" {
+				c.Class = value
+			}
+		}
+		Lawsuits = append(Lawsuits, Lawsuit{
+			Cover: c,
+		})
+	}
+
+	fmt.Println(Lawsuits)
+```
+
 ## Functions
 Functions Overview
 

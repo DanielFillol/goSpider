@@ -17,7 +17,7 @@ First, import the library in your Go project:
 import "DanielFillol/goSpider"
 ```
 ## Example Usage
-Here's an example of how to use the library (don't forget to update username := "123.456.789-10" and password := "senha123*" to your's):
+Here's an example of how to use the library:
 ```sh
 package main
 
@@ -62,39 +62,13 @@ func main() {
 }
 
 func Crawler(d string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error) {
-	fmt.Println("Crawling ", d)
-	url := "https://esaj.tjsp.jus.br/sajcas/login"
-	nav := goSpider.NewNavigator()
+	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
+	nav := NewNavigator()
 	defer nav.Close()
 
 	err := nav.OpenURL(url)
 	if err != nil {
 		log.Printf("OpenURL error: %v", err)
-		return nil, nil, nil, err
-	}
-
-	usernameSelector := "#usernameForm"
-	passwordSelector := "#passwordForm"
-	username := "123.456.789-10"
-	password := "senha123*"
-	loginButtonSelector := "#pbEntrar"
-	messageFailedSuccess := "#mensagemRetorno > li"
-
-	err = nav.Login(url, username, password, usernameSelector, passwordSelector, loginButtonSelector, messageFailedSuccess)
-	if err != nil {
-		log.Printf("Login error: %v", err)
-		return nil, nil, nil, err
-	}
-
-	err = nav.ClickButton("#esajConteudoHome > table:nth-child(7) > tbody > tr > td.esajCelulaDescricaoServicos > a")
-	if err != nil {
-		log.Printf("ClickButton error: %v", err)
-		return nil, nil, nil, err
-	}
-
-	err = nav.ClickButton("#esajConteudoHome > table:nth-child(3) > tbody > tr > td.esajCelulaDescricaoServicos > a")
-	if err != nil {
-		log.Printf("ClickButton error: %v", err)
 		return nil, nil, nil, err
 	}
 
@@ -142,6 +116,8 @@ func Crawler(d string) (map[string]string, []map[int]map[string]interface{}, []m
 
 	return cover, movements, people, nil
 }
+
+
 ```
 ## Functions
 Functions Overview

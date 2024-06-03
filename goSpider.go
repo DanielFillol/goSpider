@@ -578,11 +578,13 @@ func ParallelRequests(requests []Requests, numberOfWorkers int, duration time.Du
 	var wg sync.WaitGroup
 	resultCh := make(chan ResponseBody, len(requests)) // Buffered channel to hold all results
 
+	k := 0
 	for i := 0; i < numberOfWorkers; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for input := range inputCh {
+				k++
 				time.Sleep(duration)
 				cover, movements, people, err := crawlerFunc(input.ProcessNumber)
 				resultCh <- ResponseBody{
@@ -594,6 +596,9 @@ func ParallelRequests(requests []Requests, numberOfWorkers int, duration time.Du
 				if err != nil {
 					log.Println(err)
 					continue
+				}
+				if k == len(requests)-1 {
+					break
 				}
 			}
 		}()
@@ -614,6 +619,10 @@ func ParallelRequests(requests []Requests, numberOfWorkers int, duration time.Du
 			errorOnApiRequests = result.Error
 		}
 		results = append(results, result)
+	}
+
+	if k == len(requests)-1 {
+		return results, errorOnApiRequests
 	}
 
 	return results, errorOnApiRequests

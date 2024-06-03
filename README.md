@@ -22,7 +22,6 @@ Here's an example of how to use the library:
 package main
 
 import (
-	"fmt"
 	"github.com/DanielFillol/goSpider"
 	"log"
 	"time"
@@ -63,7 +62,7 @@ func main() {
 
 func Crawler(d string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error) {
 	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
-	nav := NewNavigator()
+	nav := goSpider.NewNavigator()
 	defer nav.Close()
 
 	err := nav.OpenURL(url)
@@ -116,6 +115,7 @@ func Crawler(d string) (map[string]string, []map[int]map[string]interface{}, []m
 
 	return cover, movements, people, nil
 }
+
 
 
 ```

@@ -6,7 +6,7 @@
 To use this library, you need to install:
 
 ```sh
-go get -u github.com/DanielFillol/goSpider
+go get github.com/DanielFillol/goSpider
 ```
 
 ## Usage

@@ -6,6 +6,7 @@
 To use this library, you need to install:
 
 ```sh
+go get github.com/chromedp/chromedp
 go get github.com/DanielFillol/goSpider
 ```
 

@@ -17,7 +17,7 @@ First, import the library in your Go project:
 import "DanielFillol/goSpider"
 ```
 ## Example Usage
-Here's an example of how to use the library:
+Here's an example of how to use the library (don't forget to update username := "123.456.789-10" and password := "senha123*" to your's):
 ```sh
 package main
 

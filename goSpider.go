@@ -21,19 +21,6 @@ type Navigator struct {
 	Logger *log.Logger
 }
 
-// Requests structure to hold user data
-type Requests struct {
-	ProcessNumber string
-}
-
-// ResponseBody structure to hold response data
-type ResponseBody struct {
-	Cover     map[string]string
-	Movements []map[int]map[string]interface{}
-	People    []map[int]map[string]interface{}
-	Error     error
-}
-
 // NewNavigator creates a new Navigator instance.
 // Example:
 //
@@ -554,13 +541,26 @@ func (nav *Navigator) SelectDropdown(selector, value string) error {
 	return nil
 }
 
+// Requests structure to hold user data
+type Requests struct {
+	ProcessNumber string
+}
+
+// ResponseBody structure to hold response data
+type ResponseBody struct {
+	Cover     map[string]string
+	Movements []map[int]map[string]interface{}
+	People    []map[int]map[string]interface{}
+	Error     error
+}
+
 // ParallelRequests performs web scraping tasks concurrently with a specified number of workers and a delay between requests.
 // The crawlerFunc parameter allows for flexibility in defining the web scraping logic.
 //
 // Parameters:
 // - requests: A slice of Requests structures containing the data needed for each request.
 // - numberOfWorkers: The number of concurrent workers to process the requests.
-// - duration: The delay duration between each request to avoid overwhelming the target server.
+// - delay: The delay duration between each request to avoid overwhelming the target server.
 // - crawlerFunc: A user-defined function that takes a process number as input and returns cover data, movements, people, and an error.
 //
 // Returns:
@@ -569,39 +569,33 @@ func (nav *Navigator) SelectDropdown(selector, value string) error {
 //
 // Example Usage:
 //
-//	results, err := asyncRequest(requests, numberOfWorkers, duration, crawlerFunc)
-func ParallelRequests(requests []Requests, numberOfWorkers int, duration time.Duration, crawlerFunc func(string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error)) ([]ResponseBody, error) {
+// results, err := ParallelRequests(requests, numberOfWorkers, delay, crawlerFunc)
+func ParallelRequests(requests []Requests, numberOfWorkers int, delay time.Duration, crawlerFunc func(string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error)) ([]ResponseBody, error) {
 	done := make(chan struct{})
 	defer close(done)
 
 	inputCh := streamInputs(done, requests)
-	var wg sync.WaitGroup
 	resultCh := make(chan ResponseBody, len(requests)) // Buffered channel to hold all results
 
-	k := 0
+	var wg sync.WaitGroup
+
+	// Start workers
 	for i := 0; i < numberOfWorkers; i++ {
 		wg.Add(1)
-		go func() {
+		go func(workerID int) {
 			defer wg.Done()
-			for input := range inputCh {
-				k++
-				time.Sleep(duration)
-				cover, movements, people, err := crawlerFunc(input.ProcessNumber)
+			for req := range inputCh {
+				log.Printf("Worker %d processing request: %s", workerID, req.ProcessNumber)
+				time.Sleep(delay)
+				cover, movements, people, err := crawlerFunc(req.ProcessNumber)
 				resultCh <- ResponseBody{
 					Cover:     cover,
 					Movements: movements,
 					People:    people,
 					Error:     err,
 				}
-				if err != nil {
-					log.Println(err)
-					continue
-				}
-				if k == len(requests)-1 {
-					break
-				}
 			}
-		}()
+		}(i)
 	}
 
 	// Close the result channel once all workers are done
@@ -610,21 +604,15 @@ func ParallelRequests(requests []Requests, numberOfWorkers int, duration time.Du
 		close(resultCh)
 	}()
 
+	// Collect results from the result channel
 	var results []ResponseBody
 	var errorOnApiRequests error
 
-	// Collect results from the result channel
 	for result := range resultCh {
 		if result.Error != nil {
 			errorOnApiRequests = result.Error
 		}
 		results = append(results, result)
-	}
-
-	if k == len(requests)-1 {
-		l := log.New(os.Stdout, "goSpider: ", log.LstdFlags)
-		l.Printf("Finished processing %d requests\n", len(requests))
-		return results, errorOnApiRequests
 	}
 
 	return results, errorOnApiRequests
@@ -634,25 +622,29 @@ func ParallelRequests(requests []Requests, numberOfWorkers int, duration time.Du
 //
 // Parameters:
 // - done: A channel to signal when to stop processing inputs.
-// - inputs: A slice of Requests structures containing the data needed for each request.
+// - requests: A slice of Requests structures containing the data needed for each request.
 //
 // Returns:
 // - A channel that streams the input requests.
 //
 // Example Usage:
 //
-//	inputCh := streamInputs(done, inputs)
-func streamInputs(done <-chan struct{}, inputs []Requests) <-chan Requests {
+// inputCh := streamInputs(done, requests)
+func streamInputs(done <-chan struct{}, requests []Requests) <-chan Requests {
 	inputCh := make(chan Requests)
 	go func() {
 		defer close(inputCh)
-		for _, input := range inputs {
+		for _, req := range requests {
 			select {
-			case inputCh <- input:
+			case inputCh <- req:
 			case <-done:
 				return
 			}
 		}
 	}()
 	return inputCh
+}
+
+func main() {
+	// Example usage
 }

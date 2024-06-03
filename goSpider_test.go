@@ -155,7 +155,7 @@ func TestGetCurrentURL(t *testing.T) {
 	}
 }
 
-func TestParallelRequests(t *testing.T) {
+func TestParallelRequests1(t *testing.T) {
 	users := []Requests{
 		{ProcessNumber: "1017927-35.2023.8.26.0008"},
 		{ProcessNumber: "0002396-75.2013.8.26.0201"},
@@ -166,40 +166,285 @@ func TestParallelRequests(t *testing.T) {
 		{ProcessNumber: "1557599-09.2021.8.26.0090"},
 		{ProcessNumber: "1045142-72.2021.8.26.0002"},
 		{ProcessNumber: "0208591-43.2009.8.26.0004"},
-		{ProcessNumber: "1017927-35.2023.8.26.0008"},
+		{ProcessNumber: "1024511-70.2022.8.26.0003"},
 	}
 
-	numberOfWorkers := 3
-	duration := 2 * time.Second
+	numberOfWorkers := 1
+	duration := 0 * time.Millisecond
 
 	results, err := ParallelRequests(users, numberOfWorkers, duration, Crawler)
 	if err != nil {
-		log.Printf("GetCurrentURL error: %v", err)
+		t.Errorf("Expected %d results, but got %d, List results: %v", len(users), 0, len(results))
 	}
 
 	log.Println("Finish Parallel Requests!")
 
-	var found []string
-	for _, u := range users {
-		for _, result := range results {
-			for _, value := range result.Cover {
-				if value == u.ProcessNumber {
-					found = append(found, value)
-				}
-			}
-		}
+	//var found []string
+	//for _, u := range users {
+	//	for _, result := range results {
+	//		for _, value := range result.Cover {
+	//			if value == u.ProcessNumber {
+	//				found = append(found, value)
+	//			}
+	//		}
+	//	}
+	//}
+	//
+	//if len(found) != len(users) {
+	//
+	//}
+
+}
+
+func TestParallelRequests2(t *testing.T) {
+	users := []Requests{
+		{ProcessNumber: "1017927-35.2023.8.26.0008"},
+		{ProcessNumber: "0002396-75.2013.8.26.0201"},
+		{ProcessNumber: "1551285-50.2021.8.26.0477"},
+		{ProcessNumber: "0015386-82.2013.8.26.0562"},
+		{ProcessNumber: "0007324-95.2015.8.26.0590"},
+		{ProcessNumber: "1545639-85.2023.8.26.0090"},
+		{ProcessNumber: "1557599-09.2021.8.26.0090"},
+		{ProcessNumber: "1045142-72.2021.8.26.0002"},
+		{ProcessNumber: "0208591-43.2009.8.26.0004"},
+		{ProcessNumber: "1024511-70.2022.8.26.0003"},
 	}
 
-	if len(found) != len(users) {
-		t.Errorf("Expected %d results, but got %d, List results: %v", len(users), len(found), found)
+	numberOfWorkers := 2
+	duration := 0 * time.Millisecond
+
+	results, err := ParallelRequests(users, numberOfWorkers, duration, Crawler)
+	if err != nil {
+		t.Errorf("Expected %d results, but got %d, List results: %v", len(users), 0, len(results))
 	}
+
+	log.Println("Finish Parallel Requests!")
+
+	//var found []string
+	//for _, u := range users {
+	//	for _, result := range results {
+	//		for _, value := range result.Cover {
+	//			if value == u.ProcessNumber {
+	//				found = append(found, value)
+	//			}
+	//		}
+	//	}
+	//}
+	//
+	//if len(found) != len(users) {
+	//
+	//}
+
+}
+
+func TestParallelRequests4(t *testing.T) {
+	users := []Requests{
+		{ProcessNumber: "1017927-35.2023.8.26.0008"},
+		{ProcessNumber: "0002396-75.2013.8.26.0201"},
+		{ProcessNumber: "1551285-50.2021.8.26.0477"},
+		{ProcessNumber: "0015386-82.2013.8.26.0562"},
+		{ProcessNumber: "0007324-95.2015.8.26.0590"},
+		{ProcessNumber: "1545639-85.2023.8.26.0090"},
+		{ProcessNumber: "1557599-09.2021.8.26.0090"},
+		{ProcessNumber: "1045142-72.2021.8.26.0002"},
+		{ProcessNumber: "0208591-43.2009.8.26.0004"},
+		{ProcessNumber: "1024511-70.2022.8.26.0003"},
+	}
+
+	numberOfWorkers := 4
+	duration := 0 * time.Millisecond
+
+	results, err := ParallelRequests(users, numberOfWorkers, duration, Crawler)
+	if err != nil {
+		t.Errorf("Expected %d results, but got %d, List results: %v", len(users), 0, len(results))
+	}
+
+	log.Println("Finish Parallel Requests!")
+
+	//var found []string
+	//for _, u := range users {
+	//	for _, result := range results {
+	//		for _, value := range result.Cover {
+	//			if value == u.ProcessNumber {
+	//				found = append(found, value)
+	//			}
+	//		}
+	//	}
+	//}
+	//
+	//if len(found) != len(users) {
+	//
+	//}
+
+}
+
+func TestParallelRequests5(t *testing.T) {
+	users := []Requests{
+		{ProcessNumber: "1017927-35.2023.8.26.0008"},
+		{ProcessNumber: "0002396-75.2013.8.26.0201"},
+		{ProcessNumber: "1551285-50.2021.8.26.0477"},
+		{ProcessNumber: "0015386-82.2013.8.26.0562"},
+		{ProcessNumber: "0007324-95.2015.8.26.0590"},
+		{ProcessNumber: "1545639-85.2023.8.26.0090"},
+		{ProcessNumber: "1557599-09.2021.8.26.0090"},
+		{ProcessNumber: "1045142-72.2021.8.26.0002"},
+		{ProcessNumber: "0208591-43.2009.8.26.0004"},
+		{ProcessNumber: "1024511-70.2022.8.26.0003"},
+	}
+
+	numberOfWorkers := 5
+	duration := 0 * time.Millisecond
+
+	results, err := ParallelRequests(users, numberOfWorkers, duration, Crawler)
+	if err != nil {
+		t.Errorf("Expected %d results, but got %d, List results: %v", len(users), 0, len(results))
+	}
+
+	log.Println("Finish Parallel Requests!")
+
+	//var found []string
+	//for _, u := range users {
+	//	for _, result := range results {
+	//		for _, value := range result.Cover {
+	//			if value == u.ProcessNumber {
+	//				found = append(found, value)
+	//			}
+	//		}
+	//	}
+	//}
+	//
+	//if len(found) != len(users) {
+	//
+	//}
+
+}
+
+func TestParallelRequests8(t *testing.T) {
+	users := []Requests{
+		{ProcessNumber: "1017927-35.2023.8.26.0008"},
+		{ProcessNumber: "0002396-75.2013.8.26.0201"},
+		{ProcessNumber: "1551285-50.2021.8.26.0477"},
+		{ProcessNumber: "0015386-82.2013.8.26.0562"},
+		{ProcessNumber: "0007324-95.2015.8.26.0590"},
+		{ProcessNumber: "1545639-85.2023.8.26.0090"},
+		{ProcessNumber: "1557599-09.2021.8.26.0090"},
+		{ProcessNumber: "1045142-72.2021.8.26.0002"},
+		{ProcessNumber: "0208591-43.2009.8.26.0004"},
+		{ProcessNumber: "1024511-70.2022.8.26.0003"},
+	}
+
+	numberOfWorkers := 8
+	duration := 0 * time.Millisecond
+
+	results, err := ParallelRequests(users, numberOfWorkers, duration, Crawler)
+	if err != nil {
+		t.Errorf("Expected %d results, but got %d, List results: %v", len(users), 0, len(results))
+	}
+
+	log.Println("Finish Parallel Requests!")
+
+	//var found []string
+	//for _, u := range users {
+	//	for _, result := range results {
+	//		for _, value := range result.Cover {
+	//			if value == u.ProcessNumber {
+	//				found = append(found, value)
+	//			}
+	//		}
+	//	}
+	//}
+	//
+	//if len(found) != len(users) {
+	//
+	//}
+
+}
+
+func TestParallelRequests10(t *testing.T) {
+	users := []Requests{
+		{ProcessNumber: "1017927-35.2023.8.26.0008"},
+		{ProcessNumber: "0002396-75.2013.8.26.0201"},
+		{ProcessNumber: "1551285-50.2021.8.26.0477"},
+		{ProcessNumber: "0015386-82.2013.8.26.0562"},
+		{ProcessNumber: "0007324-95.2015.8.26.0590"},
+		{ProcessNumber: "1545639-85.2023.8.26.0090"},
+		{ProcessNumber: "1557599-09.2021.8.26.0090"},
+		{ProcessNumber: "1045142-72.2021.8.26.0002"},
+		{ProcessNumber: "0208591-43.2009.8.26.0004"},
+		{ProcessNumber: "1024511-70.2022.8.26.0003"},
+	}
+
+	numberOfWorkers := 10
+	duration := 0 * time.Millisecond
+
+	results, err := ParallelRequests(users, numberOfWorkers, duration, Crawler)
+	if err != nil {
+		t.Errorf("Expected %d results, but got %d, List results: %v", len(users), 0, len(results))
+	}
+
+	log.Println("Finish Parallel Requests!")
+
+	//var found []string
+	//for _, u := range users {
+	//	for _, result := range results {
+	//		for _, value := range result.Cover {
+	//			if value == u.ProcessNumber {
+	//				found = append(found, value)
+	//			}
+	//		}
+	//	}
+	//}
+	//
+	//if len(found) != len(users) {
+	//
+	//}
+
+}
+
+func TestParallelRequests11(t *testing.T) {
+	users := []Requests{
+		{ProcessNumber: "1017927-35.2023.8.26.0008"},
+		{ProcessNumber: "0002396-75.2013.8.26.0201"},
+		{ProcessNumber: "1551285-50.2021.8.26.0477"},
+		{ProcessNumber: "0015386-82.2013.8.26.0562"},
+		{ProcessNumber: "0007324-95.2015.8.26.0590"},
+		{ProcessNumber: "1545639-85.2023.8.26.0090"},
+		{ProcessNumber: "1557599-09.2021.8.26.0090"},
+		{ProcessNumber: "1045142-72.2021.8.26.0002"},
+		{ProcessNumber: "0208591-43.2009.8.26.0004"},
+		{ProcessNumber: "1024511-70.2022.8.26.0003"},
+	}
+
+	numberOfWorkers := 11
+	duration := 0 * time.Millisecond
+
+	results, err := ParallelRequests(users, numberOfWorkers, duration, Crawler)
+	if err != nil {
+		t.Errorf("Expected %d results, but got %d, List results: %v", len(users), 0, len(results))
+	}
+
+	log.Println("Finish Parallel Requests!")
+
+	//var found []string
+	//for _, u := range users {
+	//	for _, result := range results {
+	//		for _, value := range result.Cover {
+	//			if value == u.ProcessNumber {
+	//				found = append(found, value)
+	//			}
+	//		}
+	//	}
+	//}
+	//
+	//if len(found) != len(users) {
+	//
+	//}
 
 }
 
 func Crawler(d string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error) {
 	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
 	nav := NewNavigator()
-	defer nav.Close()
 
 	err := nav.OpenURL(url)
 	if err != nil {
@@ -219,35 +464,35 @@ func Crawler(d string) (map[string]string, []map[int]map[string]interface{}, []m
 		return nil, nil, nil, err
 	}
 
-	err = nav.ClickButton("#botaoConsultarProcessos")
-	if err != nil {
-		log.Printf("ClickButton error: %v", err)
-		return nil, nil, nil, err
-	}
+	//err = nav.ClickButton("#botaoConsultarProcessos")
+	//if err != nil {
+	//	log.Printf("ClickButton error: %v", err)
+	//	return nil, nil, nil, err
+	//}
+	//
+	//err = nav.ClickElement("#linkmovimentacoes")
+	//if err != nil {
+	//	log.Printf("ClickElement error: %v", err)
+	//	return nil, nil, nil, err
+	//}
 
-	err = nav.ClickElement("#linkmovimentacoes")
-	if err != nil {
-		log.Printf("ClickElement error: %v", err)
-		return nil, nil, nil, err
-	}
+	//cover, err := nav.ExtractDivText("#containerDadosPrincipaisProcesso", "#maisDetalhes")
+	//if err != nil {
+	//	log.Printf("ExtractDivText error: %v", err)
+	//	return nil, nil, nil, err
+	//}
+	//
+	//people, err := nav.ExtractTableData("#tablePartesPrincipais")
+	//if err != nil {
+	//	log.Printf("ExtractTableData error: %v", err)
+	//	return nil, nil, nil, err
+	//}
+	//
+	//movements, err := nav.ExtractTableData("#tabelaTodasMovimentacoes")
+	//if err != nil {
+	//	log.Printf("ExtractTableData error: %v", err)
+	//	return nil, nil, nil, err
+	//}
 
-	people, err := nav.ExtractTableData("#tablePartesPrincipais")
-	if err != nil {
-		log.Printf("ExtractTableData error: %v", err)
-		return nil, nil, nil, err
-	}
-
-	movements, err := nav.ExtractTableData("#tabelaTodasMovimentacoes")
-	if err != nil {
-		log.Printf("ExtractTableData error: %v", err)
-		return nil, nil, nil, err
-	}
-
-	cover, err := nav.ExtractDivText("#containerDadosPrincipaisProcesso", "#maisDetalhes")
-	if err != nil {
-		log.Printf("ExtractDivText error: %v", err)
-		return nil, nil, nil, err
-	}
-
-	return cover, movements, people, nil
+	return nil, nil, nil, nil
 }

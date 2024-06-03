@@ -42,10 +42,10 @@ func main() {
 		// Add more data as needed
 	}
 
-	numberOfWorkers := 5
+	numberOfWorkers := 3
 	duration := 2 * time.Second
 
-	results, err := goSpider.AsyncRequest(users, numberOfWorkers, duration, Crawler)
+	results, err := goSpider.ParallelRequests(users, numberOfWorkers, duration, Crawler)
 	if err != nil {
 		log.Fatalf("AsyncRequest error: %v", err)
 	}
@@ -254,7 +254,7 @@ Selects an option in a dropdown specified by the selector and value.
 ```go
 err := nav.SelectDropdown("#dropdownID", "optionValue")
 ```
-- AsyncRequest(requests []Requests, numberOfWorkers int, duration time.Duration, crawlerFunc func(string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error)) ([]ResponseBody, error) Performs web scraping tasks concurrently with a specified number of workers and a delay between requests. The crawlerFunc parameter allows for flexibility in defining the web scraping logic.
+- ParallelRequests(requests []Requests, numberOfWorkers int, duration time.Duration, crawlerFunc func(string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error)) ([]ResponseBody, error) Performs web scraping tasks concurrently with a specified number of workers and a delay between requests. The crawlerFunc parameter allows for flexibility in defining the web scraping logic.
 
 - 	Parameters:
 requests: A slice of Requests structures containing the data needed for each request.
@@ -265,38 +265,5 @@ crawlerFunc: A user-defined function that takes a process number as input and re
 -	Returns:
 A slice of ResponseBody structures containing the results of the web scraping tasks.
 An error if any occurred during the requests.
- 
- ```go
-// Example crawler function
-crawlerFunc := func(processNumber string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error) {
-    // Simulate web scraping logic here
-    cover := map[string]string{"Title": "Example Title"}
-    movements := []map[int]map[string]interface{}{{1: {"Movement": "Example Movement"}}}
-    people := []map[int]map[string]interface{}{{1: {"Name": "Example Person"}}}
-    return cover, movements, people, nil
-}
-
-// Example requests
-requests := []goSpider.Requests{
-    {ProcessNumber: "123"},
-    {ProcessNumber: "456"},
-    {ProcessNumber: "789"},
-}
-
-// Execute AsyncRequest
-results, err := goSpider.AsyncRequest(requests, 3, 1*time.Second, crawlerFunc)
-if err != nil {
-    log.Fatalf("Error during async requests: %v", err)
-}
-
-// Print results
-for _, result := range results {
-    if result.Error != nil {
-        fmt.Printf("Error for request: %v\n", result.Error)
-    } else {
-        fmt.Printf("Cover: %v, Movements: %v, People: %v\n", result.Cover, result.Movements, result.People)
-    }
-}
-
 ```
 

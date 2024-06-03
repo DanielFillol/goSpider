@@ -313,5 +313,3 @@ crawlerFunc: A user-defined function that takes a process number as input and re
 -	Returns:
 A slice of ResponseBody structures containing the results of the web scraping tasks.
 An error if any occurred during the requests.
-```
-

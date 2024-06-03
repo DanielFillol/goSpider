@@ -42,7 +42,7 @@ func main() {
 		// Add more data as needed
 	}
 
-	numberOfWorkers := 3
+	numberOfWorkers := 5
 	duration := 2 * time.Second
 
 	results, err := goSpider.ParallelRequests(users, numberOfWorkers, duration, Crawler)

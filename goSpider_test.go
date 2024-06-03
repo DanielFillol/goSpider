@@ -197,40 +197,13 @@ func TestParallelRequests(t *testing.T) {
 }
 
 func Crawler(d string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error) {
-	log.Printf("Crawling: %s", d)
-
-	url := "https://esaj.tjsp.jus.br/sajcas/login"
+	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
 	nav := NewNavigator()
 	defer nav.Close()
 
 	err := nav.OpenURL(url)
 	if err != nil {
 		log.Printf("OpenURL error: %v", err)
-		return nil, nil, nil, err
-	}
-
-	usernameSelector := "#usernameForm"
-	passwordSelector := "#passwordForm"
-	username := "363.400.878-41"
-	password := "Remoto123*"
-	loginButtonSelector := "#pbEntrar"
-	messageFailedSuccess := "#mensagemRetorno > li"
-
-	err = nav.Login(url, username, password, usernameSelector, passwordSelector, loginButtonSelector, messageFailedSuccess)
-	if err != nil {
-		log.Printf("Login error: %v", err)
-		return nil, nil, nil, err
-	}
-
-	err = nav.ClickButton("#esajConteudoHome > table:nth-child(7) > tbody > tr > td.esajCelulaDescricaoServicos > a")
-	if err != nil {
-		log.Printf("ClickButton error: %v", err)
-		return nil, nil, nil, err
-	}
-
-	err = nav.ClickButton("#esajConteudoHome > table:nth-child(3) > tbody > tr > td.esajCelulaDescricaoServicos > a")
-	if err != nil {
-		log.Printf("ClickButton error: %v", err)
 		return nil, nil, nil, err
 	}
 

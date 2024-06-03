@@ -622,6 +622,8 @@ func ParallelRequests(requests []Requests, numberOfWorkers int, duration time.Du
 	}
 
 	if k == len(requests)-1 {
+		l := log.New(os.Stdout, "goSpider: ", log.LstdFlags)
+		l.Printf("Finished processing %d requests\n", len(requests))
 		return results, errorOnApiRequests
 	}
 

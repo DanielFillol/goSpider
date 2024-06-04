@@ -6,6 +6,7 @@
 To use this library, you need to install:
 
 ```sh
+go get github.com/antchfx/htmlquery
 go get github.com/chromedp/chromedp
 go get github.com/DanielFillol/goSpider
 ```
@@ -22,172 +23,84 @@ Here's an example of how to use the library:
 package main
 
 import (
+	"fmt"
 	"github.com/DanielFillol/goSpider"
+	"golang.org/x/net/html"
 	"log"
 	"time"
 )
 
 func main() {
 	users := []goSpider.Requests{
-		{ProcessNumber: "1017927-35.2023.8.26.0008"},
-		{ProcessNumber: "0002396-75.2013.8.26.0201"},
-		{ProcessNumber: "1551285-50.2021.8.26.0477"},
-		{ProcessNumber: "0015386-82.2013.8.26.0562"},
-		{ProcessNumber: "0007324-95.2015.8.26.0590"},
-		{ProcessNumber: "1545639-85.2023.8.26.0090"},
-		{ProcessNumber: "1557599-09.2021.8.26.0090"},
-		{ProcessNumber: "1045142-72.2021.8.26.0002"},
-		{ProcessNumber: "0208591-43.2009.8.26.0004"},
-		{ProcessNumber: "1017927-35.2023.8.26.0008"},
-		// Add more data as needed
+		{SearchString: "1017927-35.2023.8.26.0008"},
+		{SearchString: "0002396-75.2013.8.26.0201"},
+		{SearchString: "1551285-50.2021.8.26.0477"},
+		{SearchString: "0015386-82.2013.8.26.0562"},
+		{SearchString: "0007324-95.2015.8.26.0590"},
+		{SearchString: "1545639-85.2023.8.26.0090"},
+		{SearchString: "1557599-09.2021.8.26.0090"},
+		{SearchString: "1045142-72.2021.8.26.0002"},
+		{SearchString: "0208591-43.2009.8.26.0004"},
+		{SearchString: "1024511-70.2022.8.26.0003"},
 	}
 
 	numberOfWorkers := 1
-	duration := 2 * time.Second
+	duration := 0 * time.Millisecond
 
 	results, err := goSpider.ParallelRequests(users, numberOfWorkers, duration, Crawler)
 	if err != nil {
-		log.Fatalf("AsyncRequest error: %v", err)
+		log.Println("Expected %d results, but got %d, List results: %v", len(users), 0, len(results))
 	}
 
-	// Process the results
-	for _, result := range results {
-		if result.Error != nil {
-			log.Printf("Error: %v", result.Error)
-		} else {
-			log.Printf("Cover: %v, Movements: %v, People: %v", result.Cover, result.Movements, result.People)
-		}
-	}
+	log.Println("Finish Parallel Requests!")
+
+	fmt.Println(len(results))
 }
 
-func Crawler(d string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error) {
+func Crawler(d string) (*html.Node, error) {
 	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
 	nav := goSpider.NewNavigator()
-	defer nav.Close()
 
 	err := nav.OpenURL(url)
 	if err != nil {
 		log.Printf("OpenURL error: %v", err)
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	err = nav.CheckRadioButton("#interna_NUMPROC > div > fieldset > label:nth-child(5)")
 	if err != nil {
 		log.Printf("CheckRadioButton error: %v", err)
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	err = nav.FillField("#nuProcessoAntigoFormatado", d)
 	if err != nil {
 		log.Printf("filling field error: %v", err)
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	err = nav.ClickButton("#botaoConsultarProcessos")
 	if err != nil {
 		log.Printf("ClickButton error: %v", err)
-		return nil, nil, nil, err
+		return nil, err
 	}
 
-	err = nav.ClickElement("#linkmovimentacoes")
+	err = nav.WaitForElement("#tabelaUltimasMovimentacoes > tr:nth-child(1) > td.dataMovimentacao", 15*time.Second)
 	if err != nil {
-		log.Printf("ClickElement error: %v", err)
-		return nil, nil, nil, err
+		log.Printf("WaitForElement error: %v", err)
+		return nil, err
 	}
 
-	people, err := nav.ExtractTableData("#tablePartesPrincipais")
+	pageSource, err := nav.GetPageSource()
 	if err != nil {
-		log.Printf("ExtractTableData error: %v", err)
-		return nil, nil, nil, err
+		log.Printf("GetPageSource error: %v", err)
+		return nil, err
 	}
 
-	movements, err := nav.ExtractTableData("#tabelaTodasMovimentacoes")
-	if err != nil {
-		log.Printf("ExtractTableData error: %v", err)
-		return nil, nil, nil, err
-	}
-
-	cover, err := nav.ExtractDivText("#containerDadosPrincipaisProcesso", "#maisDetalhes")
-	if err != nil {
-		log.Printf("ExtractDivText error: %v", err)
-		return nil, nil, nil, err
-	}
-
-	return cover, movements, people, nil
+	return pageSource, nil
 }
 
-```
-## Extration Example
-```go
-	//Lawsuit
-	type Cover struct {
-		Number       string
-		Forum        string
-		Vara         string
-		Type         string
-		Value        string
-		Judge        string
-		Distribution string
-		Class        string
-		Subject      string
-		Control      string
-		Situation    string
-	}
 
-	type Person struct{}
-
-	type Movement struct{}
-
-	type Lawsuit struct {
-		Cover     Cover
-		Persons   []Person
-		Movements []Movement
-	}
-
-	var Lawsuits []Lawsuit
-	for _, result := range results {
-		var c Cover
-		for key, value := range result.Cover {
-			if key == "numeroProcesso" {
-				c.Number = value
-			}
-			if key == "foroProcesso" {
-				c.Forum = value
-			}
-			if key == "numeroControleProcesso" {
-				c.Control = value
-			}
-			if key == "valorAcaoProcesso" {
-				c.Value = value
-			}
-			if key == "dataHoraDistribuicaoProcesso" {
-				c.Distribution = value
-			}
-			if key == "areaProcesso" {
-				c.Type = value
-			}
-			if key == "assuntoProcesso" {
-				c.Subject = value
-			}
-			if key == "labelSituacaoProcesso" {
-				c.Situation = value
-			}
-			if key == "varaProcesso" {
-				c.Vara = value
-			}
-			if key == "juizProcesso" {
-				c.Judge = value
-			}
-			if key == "classeProcesso" {
-				c.Class = value
-			}
-		}
-		Lawsuits = append(Lawsuits, Lawsuit{
-			Cover: c,
-		})
-	}
-
-	fmt.Println(Lawsuits)
 ```
 
 ## Functions

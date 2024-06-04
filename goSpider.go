@@ -2,10 +2,12 @@ package goSpider
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/chromedp/cdproto/cdp"
+	"github.com/antchfx/htmlquery"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
+	"golang.org/x/net/html"
 	"io/ioutil"
 	"log"
 	"os"
@@ -146,30 +148,29 @@ func (nav *Navigator) CaptureScreenshot() error {
 	return nil
 }
 
-// GetElement retrieves the text content of an element specified by the selector.
+// GetPageSource capture all page HTML from current page
+// Return the page HTML as a string and an error if any
 // Example:
 //
-//	text, err := nav.GetElement("#elementID")
-func (nav *Navigator) GetElement(selector string) (string, error) {
-	var content string
-
-	err := nav.WaitForElement(selector, 3*time.Second)
-	if err != nil {
-		nav.Logger.Printf("Failed waiting for element: %v\n", err)
-		return "", fmt.Errorf("failed waiting for element: %v", err)
-	}
-
-	err = chromedp.Run(nav.Ctx,
-		chromedp.Text(selector, &content, chromedp.ByQuery, chromedp.NodeVisible),
+//	pageSource,err := nav.GetPageSource()
+func (nav *Navigator) GetPageSource() (*html.Node, error) {
+	nav.Logger.Println("Getting the HTML content of the page")
+	var pageHTML string
+	err := chromedp.Run(nav.Ctx,
+		chromedp.OuterHTML("html", &pageHTML),
 	)
-	if err != nil && err.Error() != "could not find node" {
-		nav.Logger.Printf("Failed to get element: %v\n", err)
-		return "", fmt.Errorf("failed to get element: %v", err)
+	if err != nil {
+		nav.Logger.Printf("Failed to get page HTML: %v\n", err)
+		return nil, fmt.Errorf("failed to get page HTML: %v", err)
 	}
-	if content == "" {
-		return "", nil // Element not found or empty
+
+	htmlPgSrc, err := htmlquery.Parse(strings.NewReader(pageHTML))
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert page HTML: %v", err)
 	}
-	return content, nil
+
+	//nav.Logger.Println("Page HTML retrieved successfully")
+	return htmlPgSrc, nil
 }
 
 // WaitForElement waits for an element specified by the selector to be visible within the given timeout.
@@ -302,149 +303,6 @@ func (nav *Navigator) FillField(selector string, value string) error {
 	return nil
 }
 
-// ExtractTableData extracts data from a table specified by the selector.
-// Example:
-//
-//	tableData, err := nav.ExtractTableData("#tableID")
-func (nav *Navigator) ExtractTableData(selector string) ([]map[int]map[string]interface{}, error) {
-	nav.Logger.Printf("Extracting table data with selector: %s\n", selector)
-	var rows []*cdp.Node
-	err := chromedp.Run(nav.Ctx,
-		chromedp.Nodes(selector+" tr", &rows, chromedp.ByQueryAll),
-	)
-	if err != nil {
-		nav.Logger.Printf("Failed to extract table rows: %v\n", err)
-		return nil, fmt.Errorf("failed to extract table rows: %v", err)
-	}
-
-	var tableData []map[int]map[string]interface{}
-	for _, row := range rows {
-		// nav.Logger.Printf("Processing row %d", rowIndex)
-		var cells []*cdp.Node
-		err = chromedp.Run(nav.Ctx,
-			chromedp.Nodes("td, th", &cells, chromedp.ByQueryAll, chromedp.FromNode(row)),
-		)
-		if err != nil {
-			nav.Logger.Printf("Failed to extract table cells: %v\n", err)
-			return nil, fmt.Errorf("failed to extract table cells: %v", err)
-		}
-
-		rowData := make(map[int]map[string]interface{})
-		for cellIndex, cell := range cells {
-			// nav.Logger.Printf("Processing cell %d in row %d", cellIndex, rowIndex)
-			cellData := make(map[string]interface{})
-
-			var cellText string
-			err = chromedp.Run(nav.Ctx,
-				chromedp.Text(cell.FullXPath(), &cellText, chromedp.NodeVisible),
-			)
-			if err != nil {
-				nav.Logger.Printf("Failed to get cell text: %v\n", err)
-				return nil, fmt.Errorf("failed to get cell text: %v", err)
-			}
-			cellData["text"] = cellText
-
-			// Check for any nested spans within the cell
-			var nestedSpans []*cdp.Node
-			nestedSpansErr := chromedp.Run(nav.Ctx,
-				chromedp.Nodes(cell.FullXPath()+"//span", &nestedSpans, chromedp.ByQueryAll),
-			)
-			if nestedSpansErr != nil {
-				// nav.Logger.Printf("No nested spans found in cell %d of row %d: %v\n", cellIndex, rowIndex, nestedSpansErr)
-				// No nested spans found, continue processing
-				nestedSpans = []*cdp.Node{}
-			}
-
-			spanData := make(map[int]string)
-			for spanIndex, span := range nestedSpans {
-				// nav.Logger.Printf("Processing span %d in cell %d of row %d", spanIndex, cellIndex, rowIndex)
-				var spanText string
-				err = chromedp.Run(nav.Ctx,
-					chromedp.Text(span.FullXPath(), &spanText, chromedp.NodeVisible),
-				)
-				if err != nil {
-					nav.Logger.Printf("Failed to get span text: %v\n", err)
-					return nil, fmt.Errorf("failed to get span text: %v", err)
-				}
-				spanData[spanIndex] = spanText
-			}
-
-			if len(spanData) > 0 {
-				cellData["spans"] = spanData
-			}
-
-			rowData[cellIndex] = cellData
-		}
-		tableData = append(tableData, rowData)
-	}
-	// nav.Logger.Println("Table data extracted successfully")
-	return tableData, nil
-}
-
-// ExtractDivText extracts text content from divs specified by the parent selectors.
-// Example:
-//
-//	textData, err := nav.ExtractDivText("#parent1", "#parent2")
-func (nav *Navigator) ExtractDivText(parentSelectors ...string) (map[string]string, error) {
-	nav.Logger.Println("Extracting text from divs")
-	data := make(map[string]string)
-	for _, parentSelector := range parentSelectors {
-		var nodes []*cdp.Node
-		err := chromedp.Run(nav.Ctx,
-			chromedp.Nodes(parentSelector+" span, "+parentSelector+" div", &nodes, chromedp.ByQueryAll),
-		)
-		if err != nil {
-			nav.Logger.Printf("Failed to extract nodes from %s: %v\n", parentSelector, err)
-			return nil, fmt.Errorf("failed to extract nodes from %s: %v", parentSelector, err)
-		}
-		for _, node := range nodes {
-			if node.NodeType == cdp.NodeTypeText {
-				continue
-			}
-			var text string
-			err = chromedp.Run(nav.Ctx,
-				chromedp.TextContent(node.FullXPath(), &text),
-			)
-			if err != nil {
-				nav.Logger.Printf("Failed to extract text content from %s: %v\n", node.FullXPath(), err)
-				return nil, fmt.Errorf("failed to extract text content from %s: %v", node.FullXPath(), err)
-			}
-			data[node.AttributeValue("id")] = strings.TrimSpace(text)
-		}
-	}
-	// nav.Logger.Println("Text extracted successfully from divs")
-	return data, nil
-}
-
-// Close closes the Navigator instance and releases resources.
-// Example:
-//
-//	nav.Close()
-func (nav *Navigator) Close() {
-	// nav.Logger.Println("Closing the Navigator instance")
-	nav.Cancel()
-	nav.Logger.Println("Navigator instance closed successfully")
-}
-
-// FetchHTML fetches the HTML content of the specified URL.
-// Example:
-//
-//	htmlContent, err := nav.FetchHTML("https://www.example.com")
-func (nav *Navigator) FetchHTML(url string) (string, error) {
-	nav.Logger.Printf("Fetching HTML content from URL: %s\n", url)
-	var htmlContent string
-	err := chromedp.Run(nav.Ctx,
-		chromedp.Navigate(url),
-		chromedp.OuterHTML("html", &htmlContent),
-	)
-	if err != nil {
-		nav.Logger.Printf("Failed to fetch URL: %v\n", err)
-		return "", fmt.Errorf("failed to fetch URL: %v", err)
-	}
-	nav.Logger.Println("HTML content fetched successfully")
-	return htmlContent, nil
-}
-
 // ExtractLinks extracts all links from the current page.
 // Example:
 //
@@ -541,17 +399,51 @@ func (nav *Navigator) SelectDropdown(selector, value string) error {
 	return nil
 }
 
-// Requests structure to hold user data
-type Requests struct {
-	ProcessNumber string
+// Close closes the Navigator instance and releases resources.
+// Example:
+//
+//	nav.Close()
+func (nav *Navigator) Close() {
+	// nav.Logger.Println("Closing the Navigator instance")
+	nav.Cancel()
+	nav.Logger.Println("Navigator instance closed successfully")
 }
 
-// ResponseBody structure to hold response data
-type ResponseBody struct {
-	Cover     map[string]string
-	Movements []map[int]map[string]interface{}
-	People    []map[int]map[string]interface{}
-	Error     error
+// GetElement retrieves the text content of an element specified by the selector.
+// Example:
+//
+//	text, err := nav.GetElement("#elementID")
+func (nav *Navigator) GetElement(selector string) (string, error) {
+	var content string
+
+	err := nav.WaitForElement(selector, 3*time.Second)
+	if err != nil {
+		nav.Logger.Printf("Failed waiting for element: %v\n", err)
+		return "", fmt.Errorf("failed waiting for element: %v", err)
+	}
+
+	err = chromedp.Run(nav.Ctx,
+		chromedp.Text(selector, &content, chromedp.ByQuery, chromedp.NodeVisible),
+	)
+	if err != nil && err.Error() != "could not find node" {
+		nav.Logger.Printf("Failed to get element: %v\n", err)
+		return "", fmt.Errorf("failed to get element: %v", err)
+	}
+	if content == "" {
+		return "", nil // Element not found or empty
+	}
+	return content, nil
+}
+
+// Requests structure to hold user data
+type Requests struct {
+	SearchString string
+}
+
+// PageSource structure to hold the HTML data
+type PageSource struct {
+	Page  *html.Node
+	Error error
 }
 
 // ParallelRequests performs web scraping tasks concurrently with a specified number of workers and a delay between requests.
@@ -561,7 +453,7 @@ type ResponseBody struct {
 // - requests: A slice of Requests structures containing the data needed for each request.
 // - numberOfWorkers: The number of concurrent workers to process the requests.
 // - delay: The delay duration between each request to avoid overwhelming the target server.
-// - crawlerFunc: A user-defined function that takes a process number as input and returns cover data, movements, people, and an error.
+// - crawlerFunc: A user-defined function that takes a process number as input and returns the html as *html.Node, and an error.
 //
 // Returns:
 // - A slice of ResponseBody structures containing the results of the web scraping tasks.
@@ -570,12 +462,12 @@ type ResponseBody struct {
 // Example Usage:
 //
 // results, err := ParallelRequests(requests, numberOfWorkers, delay, crawlerFunc)
-func ParallelRequests(requests []Requests, numberOfWorkers int, delay time.Duration, crawlerFunc func(string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error)) ([]ResponseBody, error) {
+func ParallelRequests(requests []Requests, numberOfWorkers int, delay time.Duration, crawlerFunc func(string) (*html.Node, error)) ([]PageSource, error) {
 	done := make(chan struct{})
 	defer close(done)
 
 	inputCh := streamInputs(done, requests)
-	resultCh := make(chan ResponseBody, len(requests)) // Buffered channel to hold all results
+	resultCh := make(chan PageSource, len(requests)) // Buffered channel to hold all results
 
 	var wg sync.WaitGroup
 
@@ -585,14 +477,12 @@ func ParallelRequests(requests []Requests, numberOfWorkers int, delay time.Durat
 		go func(workerID int) {
 			defer wg.Done()
 			for req := range inputCh {
-				log.Printf("Worker %d processing request: %s", workerID, req.ProcessNumber)
+				log.Printf("Worker %d processing request: %s", workerID, req.SearchString)
 				time.Sleep(delay)
-				cover, movements, people, err := crawlerFunc(req.ProcessNumber)
-				resultCh <- ResponseBody{
-					Cover:     cover,
-					Movements: movements,
-					People:    people,
-					Error:     err,
+				pageSource, err := crawlerFunc(req.SearchString)
+				resultCh <- PageSource{
+					Page:  pageSource,
+					Error: err,
 				}
 			}
 		}(i)
@@ -605,7 +495,7 @@ func ParallelRequests(requests []Requests, numberOfWorkers int, delay time.Durat
 	}()
 
 	// Collect results from the result channel
-	var results []ResponseBody
+	var results []PageSource
 	var errorOnApiRequests error
 
 	for result := range resultCh {
@@ -645,6 +535,45 @@ func streamInputs(done <-chan struct{}, requests []Requests) <-chan Requests {
 	return inputCh
 }
 
-func main() {
-	// Example usage
+// ExtractTable extracts data from a table specified by the selector.
+// Example:
+//
+//	tableData, err := goSpider.ExtractTableData("#tableID")
+func ExtractTable(pageSource *html.Node, tableRowsExpression string) ([]*html.Node, error) {
+	log.Printf("Extracting table data with selector: %s\n", tableRowsExpression)
+	rows := htmlquery.Find(pageSource, tableRowsExpression)
+	if len(rows) > 0 {
+		return rows, nil
+	}
+	// log.Printf("Table data extracted successfully")
+	return nil, errors.New("could not find any table rows")
+}
+
+// ExtractText extracts text content from nodes specified by the parent selectors.
+// Example:
+//
+//	textData, err := goSpider.ExtractText(pageSource,"#parent1", "\n")
+func ExtractText(node *html.Node, nodeExpression string, Dirt string) (string, error) {
+	//log.Print("Extracting text from node")
+	var text string
+	tt := htmlquery.Find(node, nodeExpression)
+	if len(tt) > 0 {
+		text = strings.TrimSpace(strings.Replace(htmlquery.InnerText(htmlquery.FindOne(node, nodeExpression)), Dirt, "", -1))
+		return text, nil
+	}
+
+	//log.Printf("Text %v extracted successfully from node", nodeExpression)
+	return "", errors.New("could not find specified text")
+}
+
+// FindNodes extracts nodes content from nodes specified by the parent selectors.
+// Example:
+//
+//	textData, err := goSpider.FindNode(pageSource,"#parent1")
+func FindNodes(node *html.Node, nodeExpression string) ([]*html.Node, error) {
+	n := htmlquery.Find(node, nodeExpression)
+	if len(n) > 0 {
+		return n, nil
+	}
+	return nil, errors.New("could not find specified node")
 }

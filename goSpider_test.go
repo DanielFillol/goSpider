@@ -1,9 +1,14 @@
 package goSpider
 
 import (
+	"errors"
+	"fmt"
+	"golang.org/x/net/html"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -37,11 +42,12 @@ func TestMain(m *testing.M) {
 
 // TestFetchHTML tests fetching the HTML content from a URL
 func TestFetchHTML(t *testing.T) {
-	htmlContent, err := nav.FetchHTML("http://localhost:8080")
+	nav.OpenURL("https://www.google.com")
+	htmlContent, err := nav.GetPageSource()
 	if err != nil {
 		t.Errorf("FetchHTML error: %v", err)
 	}
-	if htmlContent == "" {
+	if htmlContent == nil {
 		t.Error("FetchHTML returned empty content")
 	}
 }
@@ -116,12 +122,9 @@ func TestWaitForElement(t *testing.T) {
 // TestGetCurrentURL tests extracting the current URL from the browser
 func TestGetCurrentURL(t *testing.T) {
 	// Navigate to the main page
-	htmlContent, err := nav.FetchHTML("http://localhost:8080")
+	err := nav.OpenURL("http://localhost:8080")
 	if err != nil {
-		t.Errorf("FetchHTML error: %v", err)
-	}
-	if htmlContent == "" {
-		t.Error("FetchHTML returned empty content")
+		t.Errorf("OpenURL error: %v", err)
 	}
 
 	// Extract and verify the current URL
@@ -157,97 +160,346 @@ func TestGetCurrentURL(t *testing.T) {
 
 func TestParallelRequests(t *testing.T) {
 	users := []Requests{
-		{ProcessNumber: "1017927-35.2023.8.26.0008"},
-		{ProcessNumber: "0002396-75.2013.8.26.0201"},
-		{ProcessNumber: "1551285-50.2021.8.26.0477"},
-		{ProcessNumber: "0015386-82.2013.8.26.0562"},
-		{ProcessNumber: "0007324-95.2015.8.26.0590"},
-		{ProcessNumber: "1545639-85.2023.8.26.0090"},
-		{ProcessNumber: "1557599-09.2021.8.26.0090"},
-		{ProcessNumber: "1045142-72.2021.8.26.0002"},
-		{ProcessNumber: "0208591-43.2009.8.26.0004"},
-		{ProcessNumber: "1017927-35.2023.8.26.0008"},
+		{SearchString: "1017927-35.2023.8.26.0008"},
+		{SearchString: "0002396-75.2013.8.26.0201"},
+		{SearchString: "1551285-50.2021.8.26.0477"},
+		{SearchString: "0015386-82.2013.8.26.0562"},
+		{SearchString: "0007324-95.2015.8.26.0590"},
+		{SearchString: "1545639-85.2023.8.26.0090"},
+		{SearchString: "1557599-09.2021.8.26.0090"},
+		{SearchString: "1045142-72.2021.8.26.0002"},
+		{SearchString: "0208591-43.2009.8.26.0004"},
+		{SearchString: "1024511-70.2022.8.26.0003"},
 	}
 
-	numberOfWorkers := 3
-	duration := 2 * time.Second
+	numberOfWorkers := 10
+	duration := 0 * time.Millisecond
 
 	results, err := ParallelRequests(users, numberOfWorkers, duration, Crawler)
 	if err != nil {
-		log.Printf("GetCurrentURL error: %v", err)
+		log.Printf("ParallelRequests error: %v", err)
+	}
+
+	if len(results) != len(users) {
+		t.Errorf("Expected %d results, but got %d, List results: %v, error: %v", len(users), 0, len(results), err)
 	}
 
 	log.Println("Finish Parallel Requests!")
 
-	var found []string
-	for _, u := range users {
-		for _, result := range results {
-			for _, value := range result.Cover {
-				if value == u.ProcessNumber {
-					found = append(found, value)
-				}
-			}
-		}
+}
+
+func TestRequestsDataStruct(t *testing.T) {
+	users := []Requests{
+		{SearchString: "1017927-35.2023.8.26.0008"},
+		{SearchString: "0002396-75.2013.8.26.0201"},
+		{SearchString: "1551285-50.2021.8.26.0477"},
+		{SearchString: "0015386-82.2013.8.26.0562"},
+		{SearchString: "0007324-95.2015.8.26.0590"},
+		{SearchString: "1545639-85.2023.8.26.0090"},
+		{SearchString: "1557599-09.2021.8.26.0090"},
+		{SearchString: "1045142-72.2021.8.26.0002"},
+		{SearchString: "0208591-43.2009.8.26.0004"},
+		{SearchString: "1024511-70.2022.8.26.0003"},
 	}
 
-	if len(found) != len(users) {
-		t.Errorf("Expected %d results, but got %d, List results: %v", len(users), len(found), found)
+	numberOfWorkers := 1
+	duration := 0 * time.Millisecond
+
+	results, err := ParallelRequests(users, numberOfWorkers, duration, Crawler)
+	if err != nil {
+		t.Errorf("Expected %d results, but got %d, List results: %v", len(users), 0, len(results))
 	}
+
+	log.Println("Finish Parallel Requests!")
+
+	type Lawsuit struct {
+		Cover     Cover
+		Persons   []Person
+		Movements []Movement
+	}
+	var lawsuits []Lawsuit
+	for _, result := range results {
+		// Cover
+		c, err := extractDataCover(result.Page, "//*[@id=\"numeroProcesso\"]", "//*[@id=\"labelSituacaoProcesso\"]", "//*[@id=\"classeProcesso\"]", "//*[@id=\"assuntoProcesso\"]", "//*[@id=\"foroProcesso\"]", "//*[@id=\"varaProcesso\"]", "//*[@id=\"juizProcesso\"]", "//*[@id=\"dataHoraDistribuicaoProcesso\"]", "//*[@id=\"numeroControleProcesso\"]", "//*[@id=\"areaProcesso\"]/span", "//*[@id=\"valorAcaoProcesso\"]")
+		if err != nil {
+			t.Errorf("ExtractDataCover error: %v", err)
+		}
+		// Persons
+		p, err := extractDataPerson(result.Page, "//*[@id=\"tableTodasPartes\"]/tbody/tr", "td[1]/span", "td[2]/text()", "\n")
+		if err != nil {
+			p, err = extractDataPerson(result.Page, "//*[@id=\"tablePartesPrincipais\"]/tbody/tr", "td[1]/text()", "td[2]/text()", "\n")
+			if err != nil {
+				t.Errorf("Expected some person but got none: %v", err.Error())
+			}
+		}
+		// Movements
+		m, err := extractDataMovement(result.Page, "//*[@id=\"tabelaTodasMovimentacoes\"]/tr", "\n")
+		if err != nil {
+			t.Errorf("Expected some movement but got none: %v", err.Error())
+		}
+
+		lawsuits = append(lawsuits, Lawsuit{
+			Cover:     c,
+			Persons:   p,
+			Movements: m,
+		})
+	}
+
+	if len(lawsuits) != len(users) {
+		t.Errorf("Expected %d lawsuits, but got %d", len(users), len(lawsuits))
+	}
+
+	fmt.Println(lawsuits)
 
 }
 
-func Crawler(d string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error) {
+func Crawler(d string) (*html.Node, error) {
 	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
 	nav := NewNavigator()
-	defer nav.Close()
 
 	err := nav.OpenURL(url)
 	if err != nil {
 		log.Printf("OpenURL error: %v", err)
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	err = nav.CheckRadioButton("#interna_NUMPROC > div > fieldset > label:nth-child(5)")
 	if err != nil {
 		log.Printf("CheckRadioButton error: %v", err)
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	err = nav.FillField("#nuProcessoAntigoFormatado", d)
 	if err != nil {
 		log.Printf("filling field error: %v", err)
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	err = nav.ClickButton("#botaoConsultarProcessos")
 	if err != nil {
 		log.Printf("ClickButton error: %v", err)
-		return nil, nil, nil, err
+		return nil, err
 	}
 
-	err = nav.ClickElement("#linkmovimentacoes")
+	err = nav.WaitForElement("#tabelaUltimasMovimentacoes > tr:nth-child(1) > td.dataMovimentacao", 15*time.Second)
 	if err != nil {
-		log.Printf("ClickElement error: %v", err)
-		return nil, nil, nil, err
+		log.Printf("WaitForElement error: %v", err)
+		return nil, err
 	}
 
-	people, err := nav.ExtractTableData("#tablePartesPrincipais")
+	pageSource, err := nav.GetPageSource()
 	if err != nil {
-		log.Printf("ExtractTableData error: %v", err)
-		return nil, nil, nil, err
+		log.Printf("GetPageSource error: %v", err)
+		return nil, err
 	}
 
-	movements, err := nav.ExtractTableData("#tabelaTodasMovimentacoes")
+	return pageSource, nil
+}
+
+type Cover struct {
+	Title       string
+	Tag         string
+	Class       string
+	Subject     string
+	Location    string
+	Unit        string
+	Judge       string
+	InitialDate string
+	Control     string
+	Field       string
+	Value       string
+	Error       string
+}
+
+func extractDataCover(pageSource *html.Node, xpathTitle string, xpathTag string, xpathClass string, xpathSubject string, xpathLocation string, xpathUnit string, xpathJudge string, xpathInitDate string, xpathControl string, xpathField string, xpathValue string) (Cover, error) {
+	var i int //count errors
+	title, err := ExtractText(pageSource, xpathTitle, "                                                            ")
 	if err != nil {
-		log.Printf("ExtractTableData error: %v", err)
-		return nil, nil, nil, err
+		log.Println("error extracting title")
 	}
 
-	cover, err := nav.ExtractDivText("#containerDadosPrincipaisProcesso", "#maisDetalhes")
+	tag, err := ExtractText(pageSource, xpathTag, "")
 	if err != nil {
-		log.Printf("ExtractDivText error: %v", err)
-		return nil, nil, nil, err
+		i++
+		log.Println("error extracting tag")
 	}
 
-	return cover, movements, people, nil
+	class, err := ExtractText(pageSource, xpathClass, "")
+	if err != nil {
+		i++
+		log.Println("error extracting class")
+	}
+
+	subject, err := ExtractText(pageSource, xpathSubject, "")
+	if err != nil {
+		i++
+		log.Println("error extracting subject")
+	}
+
+	location, err := ExtractText(pageSource, xpathLocation, "")
+	if err != nil {
+		i++
+		log.Println("error extracting location")
+	}
+
+	unit, err := ExtractText(pageSource, xpathUnit, "")
+	if err != nil {
+		i++
+		log.Println("error extracting unit")
+	}
+
+	judge, err := ExtractText(pageSource, xpathJudge, "")
+	if err != nil {
+		i++
+		log.Println("error extracting existJudge")
+	}
+
+	initDate, err := ExtractText(pageSource, xpathInitDate, "")
+	if err != nil {
+		i++
+		log.Println("error extracting initDate")
+	}
+
+	control, err := ExtractText(pageSource, xpathControl, "")
+	if err != nil {
+		i++
+		log.Println("error extracting control")
+	}
+
+	field, err := ExtractText(pageSource, xpathField, "")
+	if err != nil {
+		log.Println("error extracting field")
+	}
+
+	value, err := ExtractText(pageSource, xpathValue, "R$         ")
+	if err != nil {
+		i++
+		log.Println("error extracting field value")
+	}
+
+	var e string
+	if err != nil {
+		e = err.Error()
+	}
+
+	if i >= 5 {
+		return Cover{}, fmt.Errorf("too many errors: %d", i)
+	}
+
+	return Cover{
+		Title:       title,
+		Tag:         tag,
+		Class:       class,
+		Subject:     subject,
+		Location:    location,
+		Unit:        unit,
+		Judge:       judge,
+		InitialDate: initDate,
+		Control:     control,
+		Field:       field,
+		Value:       value,
+		Error:       e,
+	}, nil
+}
+
+type Person struct {
+	Pole    string
+	Name    string
+	Lawyers []string
+}
+
+func extractDataPerson(pageSource *html.Node, xpathPeople string, xpathPole string, xpathLawyer string, dirt string) ([]Person, error) {
+	Pole, err := FindNodes(pageSource, xpathPeople)
+	if err != nil {
+		return nil, err
+	}
+
+	var personas []Person
+	for i, person := range Pole {
+		pole, err := ExtractText(person, xpathPole, dirt)
+		if err != nil {
+			return nil, errors.New("error extract data person, pole not found: " + err.Error())
+		}
+
+		var name string
+		_, err = FindNodes(person, xpathPeople+"["+strconv.Itoa(i)+"]/td[2]")
+		if err != nil {
+			name, err = ExtractText(person, "td[2]/text()", dirt)
+			if err != nil {
+				return nil, errors.New("error extract data person, name not found: " + err.Error())
+			}
+		} else {
+			name, err = ExtractText(person, "td[2]/text()["+strconv.Itoa(1)+"]", dirt)
+			if err != nil {
+				return nil, errors.New("error extract data person, name not found: " + err.Error())
+			}
+		}
+
+		var lawyers []string
+		ll, err := FindNodes(person, xpathLawyer)
+		if err != nil {
+			lawyers = append(lawyers, "no lawyer found")
+		}
+		for j, _ := range ll {
+			n, err := ExtractText(person, "td[2]/text()["+strconv.Itoa(j+1)+"]", dirt)
+			if err != nil {
+				return nil, errors.New("error extract data person, lawyer not  found: " + err.Error())
+			}
+			lawyers = append(lawyers, n)
+		}
+
+		p := Person{
+			Pole:    pole,
+			Name:    name,
+			Lawyers: lawyers,
+		}
+
+		personas = append(personas, p)
+	}
+
+	return personas, nil
+}
+
+type Movement struct {
+	Date  string
+	Title string
+	Text  string
+}
+
+func extractDataMovement(pageSource *html.Node, node string, dirt string) ([]Movement, error) {
+	xpathTable := node
+
+	tableRows, err := ExtractTable(pageSource, xpathTable)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(tableRows) > 0 {
+		var allMovements []Movement
+		for _, row := range tableRows {
+			date, err := ExtractText(row, "td[1]", dirt)
+			if err != nil {
+				return nil, errors.New("error extracting table date: " + err.Error())
+			}
+			title, err := ExtractText(row, "td[3]", dirt)
+			if err != nil {
+				return nil, errors.New("error extracting table title: " + err.Error())
+			}
+			text, err := ExtractText(row, "td[3]/span", dirt)
+			if err != nil {
+				return nil, errors.New("error extracting table text: " + err.Error())
+			}
+
+			mv := Movement{
+				Date:  strings.ReplaceAll(date, "\t", ""),
+				Title: strings.ReplaceAll(strings.ReplaceAll(title, text, ""), dirt, ""),
+				Text:  strings.TrimSpace(strings.ReplaceAll(text, "\t", "")),
+			}
+
+			allMovements = append(allMovements, mv)
+		}
+		return allMovements, nil
+	}
+
+	return nil, errors.New("error table: could not find any movements")
 }

@@ -215,14 +215,40 @@ Selects an option in a dropdown specified by the selector and value.
 ```go
 err := nav.SelectDropdown("#dropdownID", "optionValue")
 ```
-- ParallelRequests(requests []Requests, numberOfWorkers int, duration time.Duration, crawlerFunc func(string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error)) ([]ResponseBody, error) Performs web scraping tasks concurrently with a specified number of workers and a delay between requests. The crawlerFunc parameter allows for flexibility in defining the web scraping logic.
-
-- 	Parameters:
+- FindNodes(node *html.Node, nodeExpression string) ([]*html.Node, error) 
+extracts nodes content from nodes specified by the parent selectors
+```go
+nodeData, err := goSpider.FindNode(pageSource,"#parent1")
+```
+- ExtractText(node *html.Node, nodeExpression string, Dirt string) (string, error)
+```go
+textData, err := goSpider.ExtractText(pageSource,"#parent1", "\n")
+```
+- func ExtractTable(pageSource *html.Node, tableRowsExpression string) ([]*html.Node, error)
+```go
+tableData, err := goSpider.ExtractTableData(pageSource,"#tableID")
+```
+- ParallelRequests(requests []Requests, numberOfWorkers int, duration time.Duration, crawlerFunc func(string) (map[string]string, []map[int]map[string]interface{}, []map[int]map[string]interface{}, error)) ([]ResponseBody, error) Performs web scraping tasks concurrently with a specified number of workers and a delay between requests. The crawlerFunc parameter allows for flexibility in defining the web scraping logic. Parameters:
 requests: A slice of Requests structures containing the data needed for each request.
 numberOfWorkers: The number of concurrent workers to process the requests.
 duration: The delay duration between each request to avoid overwhelming the target server.
 crawlerFunc: A user-defined function that takes a process number as input and returns cover data, movements, people, and an error.
+```go
+	users := []goSpider.Requests{
+		{SearchString: "1017927-35.2023.8.26.0008"},
+		{SearchString: "0002396-75.2013.8.26.0201"},
+		{SearchString: "1551285-50.2021.8.26.0477"},
+		{SearchString: "0015386-82.2013.8.26.0562"},
+		{SearchString: "0007324-95.2015.8.26.0590"},
+		{SearchString: "1545639-85.2023.8.26.0090"},
+		{SearchString: "1557599-09.2021.8.26.0090"},
+		{SearchString: "1045142-72.2021.8.26.0002"},
+		{SearchString: "0208591-43.2009.8.26.0004"},
+		{SearchString: "1024511-70.2022.8.26.0003"},
+	}
 
--	Returns:
-A slice of ResponseBody structures containing the results of the web scraping tasks.
-An error if any occurred during the requests.
+	numberOfWorkers := 1
+	duration := 0 * time.Millisecond
+
+	results, err := goSpider.ParallelRequests(users, numberOfWorkers, duration, Crawler)
+```

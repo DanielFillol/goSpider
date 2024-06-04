@@ -6,7 +6,7 @@ require (
 	github.com/antchfx/htmlquery v1.3.1
 	github.com/chromedp/cdproto v0.0.0-20240524221637-55927c2a4565
 	github.com/chromedp/chromedp v0.9.5
-	golang.org/x/net v0.7.0
+	golang.org/x/net v0.23.0
 )
 
 require (
@@ -19,5 +19,5 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	golang.org/x/sys v0.20.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 )

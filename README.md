@@ -19,6 +19,7 @@ import "DanielFillol/goSpider"
 ```
 ## Example Usage
 Here's an example of how to use the library:
+If you need a more complete example of use, please take a look on this [project](https://github.com/DanielFillol/crawlers)
 ```go
 package main
 

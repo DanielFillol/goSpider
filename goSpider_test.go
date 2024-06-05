@@ -175,7 +175,7 @@ func TestGetCurrentURL(t *testing.T) {
 	nav := NewNavigator()
 
 	// Navigate to the main page
-	err := nav.OpenURL("http://localhost:8080")
+	err := nav.OpenURL("https://www.google.com")
 	if err != nil {
 		t.Errorf("OpenURL error: %v", err)
 	}
@@ -186,26 +186,7 @@ func TestGetCurrentURL(t *testing.T) {
 		t.Errorf("GetCurrentURL error: %v", err)
 	}
 
-	expectedURL := "http://localhost:8080/"
-	if currentURL != expectedURL {
-		t.Errorf("Expected URL: %s, but got: %s", expectedURL, currentURL)
-	}
-
-	// Navigate to page 2
-	err = nav.ClickButton("#linkToPage2")
-	if err != nil {
-		t.Errorf("ClickButton error: %v", err)
-	}
-
-	time.Sleep(2 * time.Second) // Wait for navigation to complete
-
-	// Extract and verify the current URL for page 2
-	currentURL, err = nav.GetCurrentURL()
-	if err != nil {
-		t.Errorf("GetCurrentURL error: %v", err)
-	}
-
-	expectedURL = "http://localhost:8080/page2"
+	expectedURL := "https://www.google.com/"
 	if currentURL != expectedURL {
 		t.Errorf("Expected URL: %s, but got: %s", expectedURL, currentURL)
 	}

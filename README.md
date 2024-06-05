@@ -253,3 +253,35 @@ crawlerFunc: A user-defined function that takes a process number as input and re
 
 	results, err := goSpider.ParallelRequests(users, numberOfWorkers, duration, Crawler)
 ```
+- EvaluateParallelRequests(previousResults []PageSource, crawlerFunc func(string) (*html.Node, error), evaluate func([]PageSource) ([]Request, []PageSource)) ([]PageSource, error)
+  EvaluateParallelRequests iterates over a set of previous results, evaluates them using the provided evaluation function,
+  and handles re-crawling of problematic sources until all sources are valid or no further progress can be made.
+  Parameters:
+   - previousResults: A slice of PageSource objects containing the initial crawl results.
+   - crawlerFunc: A function that takes a string (URL or identifier) and returns a parsed HTML node and an error.
+   - evaluate: A function that takes a slice of PageSource objects and returns two slices:
+     1. A slice of Request objects for sources that need to be re-crawled.
+     2. A slice of valid PageSource objects.
+  Returns:
+   - A slice of valid PageSource objects after all problematic sources have been re-crawled and evaluated.
+   - An error if there is a failure in the crawling process.
+  Example usage:
+```go
+ results, err := EvaluateParallelRequests(resultsFirst, Crawler, Eval)
+
+	func Eval(previousResults []PageSource) ([]Request, []PageSource) {
+		var newRequests []Request
+		var validResults []PageSource
+
+		for _, result := range previousResults {
+			_, err := extractDataCover(result.Page, "")
+			if err != nil {
+				newRequests = append(newRequests, Request{SearchString: result.Request})
+			} else {
+				validResults = append(validResults, result)
+			}
+		}
+
+		return newRequests, validResults
+	}
+```

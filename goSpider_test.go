@@ -5,43 +5,17 @@ import (
 	"fmt"
 	"golang.org/x/net/html"
 	"log"
-	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 )
 
-var server *http.Server
-var nav *Navigator
+// TestGetPageSource tests fetching the HTML content from a URL
+func TestGetPageSource(t *testing.T) {
+	nav := NewNavigator()
+	defer nav.Close()
 
-// TestMain sets up the test environment and tears it down after the tests are done
-func TestMain(m *testing.M) {
-	// Start the test server
-	server = StartTestServer()
-
-	// Give the server a moment to start
-	time.Sleep(1 * time.Second)
-
-	// Create a new navigator instance
-	nav = NewNavigator()
-
-	// Run the tests
-	code := m.Run()
-
-	// Close the navigator
-	nav.Close()
-
-	// Close the test server
-	server.Close()
-
-	// Exit with the appropriate code
-	os.Exit(code)
-}
-
-// TestFetchHTML tests fetching the HTML content from a URL
-func TestFetchHTML(t *testing.T) {
 	nav.OpenURL("https://www.google.com")
 	htmlContent, err := nav.GetPageSource()
 	if err != nil {
@@ -54,50 +28,107 @@ func TestFetchHTML(t *testing.T) {
 
 // TestClickButton tests clicking a button and waiting for dynamically loaded content
 func TestClickButton(t *testing.T) {
-	err := nav.ClickButton("#exampleButton")
+	nav := NewNavigator()
+	defer nav.Close()
+
+	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
+
+	err := nav.OpenURL(url)
 	if err != nil {
-		t.Errorf("ClickButton error: %v", err)
+		t.Errorf("OpenURL error: %v", err)
 	}
 
-	err = nav.WaitForElement("#dynamicElement", 10*time.Second)
+	err = nav.CheckRadioButton("#interna_NUMPROC > div > fieldset > label:nth-child(5)")
 	if err != nil {
-		t.Errorf("WaitForElement error: %v", err)
+		t.Errorf("CheckRadioButton error: %v", err)
+	}
+
+	err = nav.FillField("#nuProcessoAntigoFormatado", "1017927-35.2023.8.26.0008")
+	if err != nil {
+		t.Errorf("filling field error: %v", err)
+	}
+
+	err = nav.ClickButton("#botaoConsultarProcessos")
+	if err != nil {
+		t.Errorf("ClickButton error: %v", err)
 	}
 }
 
 // TestNestedElement tests waiting for a nested element to appear after a click
 func TestNestedElement(t *testing.T) {
-	err := nav.ClickButton("#exampleButton")
+	nav := NewNavigator()
+	defer nav.Close()
+
+	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
+
+	err := nav.OpenURL(url)
+	if err != nil {
+		t.Errorf("OpenURL error: %v", err)
+	}
+
+	err = nav.CheckRadioButton("#interna_NUMPROC > div > fieldset > label:nth-child(5)")
+	if err != nil {
+		t.Errorf("CheckRadioButton error: %v", err)
+	}
+
+	err = nav.FillField("#nuProcessoAntigoFormatado", "1017927-35.2023.8.26.0008")
+	if err != nil {
+		t.Errorf("filling field error: %v", err)
+	}
+
+	err = nav.ClickButton("#botaoConsultarProcessos")
 	if err != nil {
 		t.Errorf("ClickButton error: %v", err)
 	}
 
-	err = nav.WaitForElement("#nestedElement", 10*time.Second)
+	cUrl, err := nav.GetCurrentURL()
 	if err != nil {
-		t.Errorf("WaitForElement (nested element) error: %v", err)
+		t.Errorf("GetCurrentURL error: %v", err)
+	}
+
+	if !strings.Contains(cUrl, "https://esaj.tjsp.jus.br/cpopg/show.do?") {
+		t.Errorf("WaitForElement (nested element) error: %s", cUrl)
 	}
 }
 
 // TestFillFormAndHandleAlert tests filling a form and handling the resulting alert
 func TestFillFormAndHandleAlert(t *testing.T) {
-	formData := map[string]string{
-		"username": "test_user",
-		"password": "test_pass",
-	}
-	err := nav.FillForm("#loginForm", formData)
+	nav := NewNavigator()
+	defer nav.Close()
+
+	url := "https://www.camarapassatempo.mg.gov.br/acessocentral/problemas/contato.htm"
+
+	err := nav.OpenURL(url)
 	if err != nil {
-		t.Errorf("FillForm error: %v", err)
+		t.Errorf("OpenURL error: %v", err)
 	}
 
-	err = nav.HandleAlert()
+	formData := map[string]string{
+		"nome":     "Fulano de Tal",
+		"endereco": "Avenida do Contorno",
+		"telefone": "11912345678",
+		"email":    "null@null.com",
+	}
+
+	err = nav.FillForm("body > form", formData)
 	if err != nil {
-		t.Errorf("HandleAlert error: %v", err)
+		t.Errorf("FillForm error: %v", err)
 	}
 }
 
 // TestSelectDropdown tests selecting an option from a dropdown menu
 func TestSelectDropdown(t *testing.T) {
-	err := nav.SelectDropdown("#dropdown", "option2")
+	nav := NewNavigator()
+	defer nav.Close()
+
+	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
+
+	err := nav.OpenURL(url)
+	if err != nil {
+		t.Errorf("OpenURL error: %v", err)
+	}
+
+	err = nav.SelectDropdown("#cbPesquisa", "DOCPARTE")
 	if err != nil {
 		t.Errorf("SelectDropdown error: %v", err)
 	}
@@ -105,7 +136,17 @@ func TestSelectDropdown(t *testing.T) {
 
 // TestSelectRadioButton tests selecting a radio button
 func TestSelectRadioButton(t *testing.T) {
-	err := nav.CheckRadioButton("#radioButton")
+	nav := NewNavigator()
+	defer nav.Close()
+
+	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
+
+	err := nav.OpenURL(url)
+	if err != nil {
+		t.Errorf("OpenURL error: %v", err)
+	}
+
+	err = nav.CheckRadioButton("#interna_NUMPROC > div > fieldset > label:nth-child(5)")
 	if err != nil {
 		t.Errorf("SelectRadioButton error: %v", err)
 	}
@@ -113,7 +154,17 @@ func TestSelectRadioButton(t *testing.T) {
 
 // TestWaitForElement tests waiting for an element to be visible after a delay
 func TestWaitForElement(t *testing.T) {
-	err := nav.WaitForElement("#delayedElement", 10*time.Second)
+	nav := NewNavigator()
+	defer nav.Close()
+
+	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
+
+	err := nav.OpenURL(url)
+	if err != nil {
+		t.Errorf("OpenURL error: %v", err)
+	}
+
+	err = nav.WaitForElement("#interna_NUMPROC > div > fieldset > label:nth-child(5)", 10*time.Second)
 	if err != nil {
 		t.Errorf("WaitForElement (delayed element) error: %v", err)
 	}
@@ -121,6 +172,8 @@ func TestWaitForElement(t *testing.T) {
 
 // TestGetCurrentURL tests extracting the current URL from the browser
 func TestGetCurrentURL(t *testing.T) {
+	nav := NewNavigator()
+
 	// Navigate to the main page
 	err := nav.OpenURL("http://localhost:8080")
 	if err != nil {
@@ -159,7 +212,7 @@ func TestGetCurrentURL(t *testing.T) {
 }
 
 func TestParallelRequests(t *testing.T) {
-	users := []Requests{
+	users := []Request{
 		{SearchString: "1017927-35.2023.8.26.0008"},
 		{SearchString: "0002396-75.2013.8.26.0201"},
 		{SearchString: "1551285-50.2021.8.26.0477"},
@@ -184,12 +237,12 @@ func TestParallelRequests(t *testing.T) {
 		t.Errorf("Expected %d results, but got %d, List results: %v, error: %v", len(users), 0, len(results), err)
 	}
 
-	log.Println("Finish Parallel Requests!")
+	log.Println("Finish Parallel Request!")
 
 }
 
 func TestRequestsDataStruct(t *testing.T) {
-	users := []Requests{
+	users := []Request{
 		{SearchString: "1017927-35.2023.8.26.0008"},
 		{SearchString: "0002396-75.2013.8.26.0201"},
 		{SearchString: "1551285-50.2021.8.26.0477"},
@@ -202,15 +255,18 @@ func TestRequestsDataStruct(t *testing.T) {
 		{SearchString: "1024511-70.2022.8.26.0003"},
 	}
 
-	numberOfWorkers := 1
-	duration := 0 * time.Millisecond
+	numberOfWorkers := 5
+	duration := 500 * time.Millisecond
 
-	results, err := ParallelRequests(users, numberOfWorkers, duration, Crawler)
+	resultsFirst, err := ParallelRequests(users, numberOfWorkers, duration, Crawler)
+	if err != nil {
+		t.Errorf("Expected %d results, but got %d, List results: %v", len(users), 0, len(resultsFirst))
+	}
+
+	results, err := EvaluateParallelRequests(resultsFirst, Crawler, Eval)
 	if err != nil {
 		t.Errorf("Expected %d results, but got %d, List results: %v", len(users), 0, len(results))
 	}
-
-	log.Println("Finish Parallel Requests!")
 
 	type Lawsuit struct {
 		Cover     Cover
@@ -253,9 +309,27 @@ func TestRequestsDataStruct(t *testing.T) {
 
 }
 
+func Eval(previousResults []PageSource) ([]Request, []PageSource) {
+	var newRequests []Request
+	var validResults []PageSource
+
+	for _, result := range previousResults {
+		_, err := extractDataCover(result.Page, "//*[@id=\"numeroProcesso\"]", "//*[@id=\"labelSituacaoProcesso\"]", "//*[@id=\"classeProcesso\"]", "//*[@id=\"assuntoProcesso\"]", "//*[@id=\"foroProcesso\"]", "//*[@id=\"varaProcesso\"]", "//*[@id=\"juizProcesso\"]", "//*[@id=\"dataHoraDistribuicaoProcesso\"]", "//*[@id=\"numeroControleProcesso\"]", "//*[@id=\"areaProcesso\"]/span", "//*[@id=\"valorAcaoProcesso\"]")
+		if err != nil {
+			newRequests = append(newRequests, Request{SearchString: result.Request})
+		} else {
+			validResults = append(validResults, result)
+		}
+	}
+
+	return newRequests, validResults
+}
+
 func Crawler(d string) (*html.Node, error) {
-	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
 	nav := NewNavigator()
+	defer nav.Close()
+
+	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
 
 	err := nav.OpenURL(url)
 	if err != nil {
@@ -281,9 +355,9 @@ func Crawler(d string) (*html.Node, error) {
 		return nil, err
 	}
 
-	err = nav.WaitForElement("#tabelaUltimasMovimentacoes > tr:nth-child(1) > td.dataMovimentacao", 15*time.Second)
+	_, err = nav.WaitPageLoad()
 	if err != nil {
-		log.Printf("WaitForElement error: %v", err)
+		log.Printf("WaitPageLoad error: %v", err)
 		return nil, err
 	}
 
@@ -440,7 +514,7 @@ func extractDataPerson(pageSource *html.Node, xpathPeople string, xpathPole stri
 		if err != nil {
 			lawyers = append(lawyers, "no lawyer found")
 		}
-		for j, _ := range ll {
+		for j := range ll {
 			n, err := ExtractText(person, "td[2]/text()["+strconv.Itoa(j+1)+"]", dirt)
 			if err != nil {
 				return nil, errors.New("error extract data person, lawyer not  found: " + err.Error())

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/antchfx/htmlquery"
+	"github.com/DanielFillol/goSpider/htmlQuery"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 	"golang.org/x/net/html"

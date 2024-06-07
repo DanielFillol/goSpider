@@ -59,7 +59,7 @@ func main() {
 
 func Crawler(d string) (*html.Node, error) {
 	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
-	nav := goSpider.NewNavigator("")
+	nav := goSpider.NewNavigator("", true)
 
 	err := nav.OpenURL(url)
 	if err != nil {
@@ -106,8 +106,10 @@ func Crawler(d string) (*html.Node, error) {
 ## Functions
 Functions Overview
 
-- NewNavigator() *Navigator
+- NewNavigator(profilePath string, headless bool) *Navigator
 Creates a new instance of the Navigator struct, initializing a new ChromeDP context and logger.
+profilePath: the path to chrome profile defined by the user;can be passed as an empty string
+headless: if false will show chrome UI
 ```go
 nav := goSpider.NewNavigator()
 ```

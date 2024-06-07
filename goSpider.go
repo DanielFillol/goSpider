@@ -1,6 +1,7 @@
 package goSpider
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -24,15 +25,35 @@ type Navigator struct {
 }
 
 // NewNavigator creates a new Navigator instance.
+//
+// Parameters:
+//   - profilePath: the path to chrome profile defined by the user;can be passed as an empty string
+//
 // Example:
 //
-//	nav := goSpider.NewNavigator()
-func NewNavigator() *Navigator {
-	ctx, cancel := chromedp.NewContext(context.Background())
+//	nav := goSpider.NewNavigator("/Users/USER_NAME/Library/Application Support/Google/Chrome/Profile 2")
+func NewNavigator(profilePath string) *Navigator {
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.NoDefaultBrowserCheck,
+		chromedp.Headless,
+		//chromedp.Flag("headless", false),
+		chromedp.DisableGPU,
+		chromedp.Flag("no-sandbox", true),
+		chromedp.Flag("disable-setuid-sandbox", true),
+		chromedp.Flag("enable-automation", true),
+	)
+
+	if profilePath != "" {
+		opts = append(opts, chromedp.UserDataDir(profilePath))
+	}
+
+	allocCtx, cancelCtx := chromedp.NewExecAllocator(context.Background(), opts...)
+	ctx, cancelCtx := chromedp.NewContext(allocCtx, chromedp.WithLogf(log.Printf))
+
 	logger := log.New(os.Stdout, "goSpider: ", log.LstdFlags)
 	return &Navigator{
 		Ctx:    ctx,
-		Cancel: cancel,
+		Cancel: cancelCtx,
 		Logger: logger,
 	}
 }
@@ -148,6 +169,100 @@ func (nav *Navigator) Login(url, username, password, usernameSelector, passwordS
 	}
 	nav.Logger.Println("Logged in successfully")
 	return nil
+}
+
+// LoginWithGoogle performs the Google login on the given URL
+func (nav *Navigator) LoginWithGoogle(email, password string) error {
+	nav.Logger.Printf("Opening URL: %s\n", "accounts.google.com")
+	err := chromedp.Run(nav.Ctx, chromedp.Navigate("https://accounts.google.com"))
+	if err != nil {
+		nav.Logger.Printf("Failed to open URL: %v\n", err)
+		return fmt.Errorf("failed to open URL: %v", err)
+	}
+
+	_, err = nav.WaitPageLoad()
+	if err != nil {
+		nav.Logger.Printf("Failed to WaitPageLoad: %v\n", err)
+		return fmt.Errorf("failed to WaitPageLoad: %v", err)
+	}
+	time.Sleep(300 * time.Millisecond)
+
+	// Fill the Google login form
+	nav.Logger.Println("Filling in the Google login form")
+	err = nav.FillField(`#identifierId`, email)
+	if err != nil {
+		err = nav.WaitForElement("#yDmH0d > c-wiz > div > div:nth-child(2) > div > c-wiz > c-wiz > div > div.s7iwrf.gMPiLc.Kdcijb > div > div > header > h1", 300*time.Millisecond)
+		if err != nil {
+			nav.Logger.Printf("Error - Failed to log in: %v\n", err)
+			return fmt.Errorf("error - failed to check login: %v", err)
+		} else {
+			s, err := nav.GetElement("#yDmH0d > c-wiz > div > div:nth-child(2) > div > c-wiz > c-wiz > div > div.s7iwrf.gMPiLc.Kdcijb > div > div > header > h1")
+			if err != nil {
+				nav.Logger.Printf("Error - Failed to log in: %v\n", err)
+				return fmt.Errorf("error - failed to check login: %v", err)
+			}
+			nav.Logger.Printf("Already logged in! \n%s", s)
+			return nil
+		}
+	}
+
+	err = nav.ClickButton(`#identifierNext`)
+	if err != nil {
+		nav.Logger.Printf("Failed to click the 'Next' button: %v\n", err)
+		return fmt.Errorf("failed to click the 'Next' button: %v", err)
+	}
+
+	// Adding a small delay to allow the next page to load
+	_, err = nav.WaitPageLoad()
+	if err != nil {
+		nav.Logger.Printf("Failed to WaitPageLoad: %v\n", err)
+		return fmt.Errorf("failed to WaitPageLoad: %v", err)
+	}
+	time.Sleep(2 * time.Second)
+
+	err = nav.FillField("#password > div.aCsJod.oJeWuf > div > div.Xb9hP > input", password)
+	if err != nil {
+		nav.Logger.Printf("Failed to fill the password field: %v\n", err)
+		return fmt.Errorf("failed to fill the password field: %v", err)
+	}
+
+	err = nav.ClickButton(`#passwordNext`)
+	if err != nil {
+		nav.Logger.Printf("Failed to click the 'Next' button for password: %v\n", err)
+		return fmt.Errorf("failed to click the 'Next' button for password: %v", err)
+	}
+
+	// Adding a small delay to allow the next page to load
+	_, err = nav.WaitPageLoad()
+	if err != nil {
+		nav.Logger.Printf("Failed to WaitPageLoad: %v\n", err)
+		return fmt.Errorf("failed to WaitPageLoad: %v", err)
+	}
+	time.Sleep(2 * time.Second)
+
+	authCode := AskForString("Google verification pass: ")
+
+	//"#yDmH0d > c-wiz > div > div.UXFQgc > div > div > div > form > span > section:nth-child(2) > div > div > div.AFTWye.GncK > div > div.aCsJod.oJeWuf > div > div.Xb9hP"
+	err = nav.FillField("#idvPin", authCode)
+	if err != nil {
+		nav.Logger.Printf("Failed to fill the idvPin with code: %s\n field: %v\n", authCode, err)
+		return fmt.Errorf("failed to fill the idvPin with code: %s\n field: %v\n", authCode, err)
+	}
+
+	nav.Logger.Println("Google login completed successfully")
+	return nil
+}
+
+// AskForString prompts the user to enter a string and returns the trimmed input.
+func AskForString(prompt string) string {
+	fmt.Print(prompt)                     // Display the prompt to the user
+	reader := bufio.NewReader(os.Stdin)   // Create a new reader for standard input
+	input, err := reader.ReadString('\n') // Read the input until a newline character is encountered
+	if err != nil {                       // Check if there was an error during input
+		fmt.Println("Error reading input:", err) // Print the error message
+		return ""                                // Return an empty string in case of an error
+	}
+	return strings.TrimSpace(input) // Trim any leading/trailing whitespace including the newline character
 }
 
 // CaptureScreenshot captures a screenshot of the current browser window.

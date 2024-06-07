@@ -59,7 +59,7 @@ func main() {
 
 func Crawler(d string) (*html.Node, error) {
 	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
-	nav := goSpider.NewNavigator()
+	nav := goSpider.NewNavigator("")
 
 	err := nav.OpenURL(url)
 	if err != nil {
@@ -284,3 +284,9 @@ crawlerFunc: A user-defined function that takes a process number as input and re
 		return newRequests, validResults
 	}
 ```
+- func LoginWithGoogle(email, password string) error
+performs the Google login on https://accounts.google.com. The email and password are required for loggin and the 2FA code is passed on prompt.
+```go
+err := nav.LoginWithGoogle("yor_login", "your_password")
+```
+

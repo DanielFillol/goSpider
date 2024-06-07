@@ -1,5 +1,5 @@
 # goSpider Navigation Library
- This Go library provides functions to navigate websites and retrieve information using `chromedp`. It supports basic actions like fetching HTML content, clicking buttons, filling forms, handling alerts, and more complex interactions such as handling AJAX requests and dynamically loaded content.
+ This Go library provides functions to navigate websites and retrieve information using `chromedp`. It supports basic actions like fetching HTML content, clicking buttons, filling forms, handling alerts, and more complex interactions such as dynamically loaded content.
 
 ## Installation
 

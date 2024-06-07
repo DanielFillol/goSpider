@@ -13,7 +13,7 @@ import (
 
 // TestGetPageSource tests fetching the HTML content from a URL
 func TestGetPageSource(t *testing.T) {
-	nav := NewNavigator()
+	nav := NewNavigator("")
 	defer nav.Close()
 
 	nav.OpenURL("https://www.google.com")
@@ -28,7 +28,7 @@ func TestGetPageSource(t *testing.T) {
 
 // TestClickButton tests clicking a button and waiting for dynamically loaded content
 func TestClickButton(t *testing.T) {
-	nav := NewNavigator()
+	nav := NewNavigator("")
 	defer nav.Close()
 
 	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
@@ -56,7 +56,7 @@ func TestClickButton(t *testing.T) {
 
 // TestNestedElement tests waiting for a nested element to appear after a click
 func TestNestedElement(t *testing.T) {
-	nav := NewNavigator()
+	nav := NewNavigator("")
 	defer nav.Close()
 
 	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
@@ -93,7 +93,7 @@ func TestNestedElement(t *testing.T) {
 
 // TestFillFormAndHandleAlert tests filling a form and handling the resulting alert
 func TestFillFormAndHandleAlert(t *testing.T) {
-	nav := NewNavigator()
+	nav := NewNavigator("")
 	defer nav.Close()
 
 	url := "https://www.camarapassatempo.mg.gov.br/acessocentral/problemas/contato.htm"
@@ -118,7 +118,7 @@ func TestFillFormAndHandleAlert(t *testing.T) {
 
 // TestSelectDropdown tests selecting an option from a dropdown menu
 func TestSelectDropdown(t *testing.T) {
-	nav := NewNavigator()
+	nav := NewNavigator("")
 	defer nav.Close()
 
 	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
@@ -136,7 +136,7 @@ func TestSelectDropdown(t *testing.T) {
 
 // TestSelectRadioButton tests selecting a radio button
 func TestSelectRadioButton(t *testing.T) {
-	nav := NewNavigator()
+	nav := NewNavigator("")
 	defer nav.Close()
 
 	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
@@ -154,7 +154,7 @@ func TestSelectRadioButton(t *testing.T) {
 
 // TestWaitForElement tests waiting for an element to be visible after a delay
 func TestWaitForElement(t *testing.T) {
-	nav := NewNavigator()
+	nav := NewNavigator("")
 	defer nav.Close()
 
 	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
@@ -172,7 +172,7 @@ func TestWaitForElement(t *testing.T) {
 
 // TestGetCurrentURL tests extracting the current URL from the browser
 func TestGetCurrentURL(t *testing.T) {
-	nav := NewNavigator()
+	nav := NewNavigator("")
 
 	// Navigate to the main page
 	err := nav.OpenURL("https://www.google.com")
@@ -191,6 +191,20 @@ func TestGetCurrentURL(t *testing.T) {
 		t.Errorf("Expected URL: %s, but got: %s", expectedURL, currentURL)
 	}
 }
+
+// Won't pass on test because 2FA requires input on the terminal by the user, for that reason alone the test will fail
+//// TestLoginGoogle tests google single logon
+//func TestLoginGoogle(t *testing.T) {
+//	profilePath := "/Users/USER_NAME/Library/Application Support/Google/Chrome/Profile 2\""
+//	nav := NewNavigator(profilePath)
+//	defer nav.Close()
+//
+//	err := nav.LoginWithGoogle("", "")
+//	if err != nil {
+//		t.Errorf("LoginWithGoogle error: %v", err)
+//	}
+//
+//}
 
 func TestParallelRequests(t *testing.T) {
 	users := []Request{
@@ -307,7 +321,7 @@ func Eval(previousResults []PageSource) ([]Request, []PageSource) {
 }
 
 func Crawler(d string) (*html.Node, error) {
-	nav := NewNavigator()
+	nav := NewNavigator("")
 	defer nav.Close()
 
 	url := "https://esaj.tjsp.jus.br/cpopg/open.do"

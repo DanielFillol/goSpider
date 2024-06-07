@@ -28,21 +28,25 @@ type Navigator struct {
 //
 // Parameters:
 //   - profilePath: the path to chrome profile defined by the user;can be passed as an empty string
+//   - headless: if false will show chrome UI
 //
 // Example:
 //
-//	nav := goSpider.NewNavigator("/Users/USER_NAME/Library/Application Support/Google/Chrome/Profile 2")
-func NewNavigator(profilePath string) *Navigator {
+//	nav := goSpider.NewNavigator("/Users/USER_NAME/Library/Application Support/Google/Chrome/Profile 2", true)
+func NewNavigator(profilePath string, headless bool) *Navigator {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.NoDefaultBrowserCheck,
-		chromedp.Headless,
-		//chromedp.Flag("headless", false),
 		chromedp.DisableGPU,
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("disable-setuid-sandbox", true),
 		chromedp.Flag("enable-automation", true),
 	)
 
+	if headless {
+		opts = append(opts, chromedp.Headless)
+	} else {
+		opts = append(opts, chromedp.Flag("headless", false))
+	}
 	if profilePath != "" {
 		opts = append(opts, chromedp.UserDataDir(profilePath))
 	}

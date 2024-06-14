@@ -174,8 +174,8 @@ func (nav *Navigator) Login(url, username, password, usernameSelector, passwordS
 	return nil
 }
 
-// LoginWithGoogle performs the Google login on the given URL
-func (nav *Navigator) LoginWithGoogle(email, password string) error {
+// LoginAccountsGoogle performs the Google login on the given URL
+func (nav *Navigator) LoginAccountsGoogle(email, password string) error {
 	nav.Logger.Printf("Opening URL: %s\n", "accounts.google.com")
 	err := chromedp.Run(nav.Ctx, chromedp.Navigate("https://accounts.google.com"))
 	if err != nil {
@@ -253,6 +253,103 @@ func (nav *Navigator) LoginWithGoogle(email, password string) error {
 	}
 
 	nav.Logger.Println("Google login completed successfully")
+	return nil
+}
+
+// LoginWithGoogle performs the Google login on the given URL
+func (nav *Navigator) LoginWithGoogle(url string) error {
+	nav.Logger.Printf("Opening URL: %s\n", url)
+	err := chromedp.Run(nav.Ctx,
+		chromedp.Navigate(url),
+	)
+	if err != nil {
+		nav.Logger.Printf("Failed to open URL: %v\n", err)
+		return fmt.Errorf("failed to open URL: %v", err)
+	}
+
+	nav.Logger.Println("Clicking the 'Continuar com o Google' button")
+	err = nav.ClickButton(".SocialButton")
+	if err != nil {
+		nav.Logger.Printf("Alredy logged in: %v\n", err)
+		return nil
+		//nav.Logger.Printf("Failed to click the Google login button: %v\n", err)
+		//return fmt.Errorf("failed to click the Google login button: %v", err)
+	}
+
+	// Wait for the popup to appear and switch to it
+	nav.Logger.Println("Switching to the Google login popup")
+	var popupCtx context.Context
+	var popupCancel context.CancelFunc
+	for {
+		select {
+		case <-time.After(1 * time.Second):
+			targets, _ := chromedp.Targets(nav.Ctx)
+			if len(targets) > 1 {
+				for _, t := range targets {
+					if t.Type == "page" && t.TargetID != chromedp.FromContext(nav.Ctx).Target.TargetID {
+						popupCtx, popupCancel = chromedp.NewContext(nav.Ctx, chromedp.WithTargetID(targets[1].TargetID))
+						break
+					}
+				}
+			}
+		case <-time.After(10 * time.Second):
+			nav.Logger.Println("Failed to detect the Google login popup")
+			return fmt.Errorf("failed to detect the Google login popup")
+		}
+		if popupCtx != nil {
+			break
+		}
+	}
+
+	// Ensure the popup context is cancelled after use
+	defer popupCancel()
+
+	// Create a new logger for the popup context
+	popupLogger := log.New(os.Stdout, "popup: ", log.LstdFlags)
+	newNav := Navigator{
+		Ctx:    popupCtx,
+		Cancel: popupCancel,
+		Logger: popupLogger,
+	}
+
+	// Log the current URL of the popup
+	currentURL, err := newNav.GetCurrentURL()
+	if err != nil {
+		nav.Logger.Printf("Failed to get the current URL of the popup: %v\n", err)
+		return err
+	}
+	fmt.Printf("Popup URL: %s\n", currentURL)
+
+	// Check if the popup navigated to the Google login page
+	if !strings.Contains(currentURL, "accounts.google.com") {
+		nav.Logger.Printf("Popup did not navigate to Google login page, current URL: %s\n", currentURL)
+		return fmt.Errorf("popup did not navigate to Google login page")
+	}
+
+	// Increase the timeout for filling the form fields
+	popupCtx, popupCancel = context.WithTimeout(popupCtx, 30*time.Second)
+	defer popupCancel()
+
+	// Fill the Google login form
+	err = newNav.ClickElement("#container")
+	if err != nil {
+		nav.Logger.Printf("Failed to click element: %v\n", err)
+		return fmt.Errorf("failed to click element: %v", err)
+	}
+
+	_, err = newNav.WaitPageLoad()
+	if err != nil {
+		nav.Logger.Printf("Failed to WaitPageLoad: %v\n", err)
+		return fmt.Errorf("failed to WaitPageLoad: %v", err)
+	}
+
+	err = newNav.ClickButton("#credentials-picker > div.fFW7wc-ibnC6b-sM5MNb.TAKBxb")
+	if err != nil {
+		nav.Logger.Printf("Failed to click button: %v\n", err)
+		return fmt.Errorf("failed to click button: %v", err)
+	}
+
+	newNav.Logger.Println("Google login completed successfully")
 	return nil
 }
 

@@ -3,6 +3,7 @@ package goSpider
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/DanielFillol/goSpider/htmlQuery"
@@ -126,7 +127,7 @@ func (nav *Navigator) GetCurrentURL() (string, error) {
 // Login logs into a website using the provided credentials and selectors.
 // Example:
 //
-//	err := nav.Login("https://www.example.com/login", "username", "password", "#username", "#password", "#login-button", "Login failed")
+//	err := nav.Login("https://www.example.com/login", "username", "password", "#username", "#password", "#login-button", "#login-message-fail")
 func (nav *Navigator) Login(url, username, password, usernameSelector, passwordSelector, loginButtonSelector string, messageFailedSuccess string) error {
 	nav.Logger.Printf("Logging into URL: %s\n", url)
 
@@ -790,6 +791,66 @@ func (nav *Navigator) GetElement(selector string) (string, error) {
 
 	nav.Logger.Printf("Got element with selector: %s\n", selector)
 	return content, nil
+}
+
+// SaveImageBase64 extracts the base64 image data from the given selector and saves it to a file.
+//
+// Parameters:
+//   - selector: the CSS selector of the CAPTCHA image element
+//   - outputPath: the file path to save the image
+//   - prefixClean: the prefix to clear form the source, if any
+//
+// Example:
+//
+//	err := nav.SaveImageBase64("#imagemCaptcha", "captcha.png", "data:image/png;base64,")
+func (nav *Navigator) SaveImageBase64(selector, outputPath, prefixClean string) error {
+	var imageData string
+
+	// Run the tasks
+	err := chromedp.Run(nav.Ctx,
+		chromedp.AttributeValue(selector, "src", &imageData, nil),
+	)
+	if err != nil {
+		nav.Logger.Printf("Error - Failed to get image data: %v\n", err)
+		return fmt.Errorf("error - failed to get image data: %w", err)
+	}
+
+	var base64Data string
+	if prefixClean != "" {
+		// Check if the image data is in base64 format
+		if !strings.HasPrefix(imageData, prefixClean) {
+			nav.Logger.Printf("Error - Unexpected image format: %v\n", err)
+			return fmt.Errorf("error - unexpected image format")
+		}
+
+		// Remove the data URL prefix
+		base64Data = strings.TrimPrefix(imageData, prefixClean)
+	}
+
+	// Remove any newlines or spaces (just in case)
+	base64Data = strings.ReplaceAll(base64Data, "\n", "")
+	base64Data = strings.ReplaceAll(base64Data, "\r", "")
+	base64Data = strings.TrimSpace(base64Data)
+
+	// Decode the base64 data
+	imageBytes, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return fmt.Errorf("failed to decode base64 image: %w", err)
+	}
+
+	// Check if decoded bytes are non-zero
+	if len(imageBytes) == 0 {
+		return fmt.Errorf("decoded image bytes are zero, something went wrong with extraction or decoding")
+	}
+
+	// Save the image to a file
+	err = ioutil.WriteFile(outputPath, imageBytes, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to save image: %w", err)
+	}
+
+	nav.Logger.Printf("Captcha image saved successfully to %s", outputPath)
+	return nil
 }
 
 // Close closes the Navigator instance and releases resources.

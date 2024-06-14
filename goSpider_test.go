@@ -206,6 +206,36 @@ func TestGetCurrentURL(t *testing.T) {
 //
 //}
 
+func TestSaveCaptchaImage(t *testing.T) {
+	nav := NewNavigator("", false)
+	defer nav.Close()
+
+	err := nav.OpenURL("https://pje.trt2.jus.br/consultaprocessual/")
+	if err != nil {
+		t.Errorf("OpenURL error: %v", err)
+	}
+
+	err = nav.FillField("#nrProcessoInput", "1000113-34.2018.5.02.0386")
+	if err != nil {
+		t.Errorf("FillField error: %v", err)
+	}
+
+	err = nav.ClickButton("#btnPesquisar")
+	if err != nil {
+		t.Errorf("ClickButton error: %v", err)
+	}
+
+	err = nav.WaitForElement("#imagemCaptcha", 10*time.Second)
+	if err != nil {
+		t.Errorf("WaitForElement error: %v", err)
+	}
+
+	err = nav.SaveImageBase64("#imagemCaptcha", "image.png", "data:image/png;base64,")
+	if err != nil {
+		t.Errorf("SaveImageBase64 error: %v", err)
+	}
+}
+
 func TestParallelRequests(t *testing.T) {
 	users := []Request{
 		{SearchString: "1017927-35.2023.8.26.0008"},

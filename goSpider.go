@@ -142,12 +142,6 @@ func (nav *Navigator) Login(url, username, password, usernameSelector, passwordS
 		return fmt.Errorf("error - failed waiting for element: %v", err)
 	}
 
-	err = nav.WaitForElement(messageFailedSuccess, 300*time.Millisecond)
-	if err != nil {
-		nav.Logger.Printf("Error - Failed waiting for element: %v\n", err)
-		return fmt.Errorf("error - failed waiting for element: %v", err)
-	}
-
 	err = chromedp.Run(nav.Ctx,
 		chromedp.Navigate(url),
 		chromedp.WaitVisible(usernameSelector, chromedp.ByQuery),

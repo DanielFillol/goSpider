@@ -133,7 +133,13 @@ func (nav *Navigator) GetCurrentURL() (string, error) {
 func (nav *Navigator) Login(url, username, password, usernameSelector, passwordSelector, loginButtonSelector string, messageFailedSuccess string) error {
 	nav.Logger.Printf("Logging into URL: %s\n", url)
 
-	err := nav.WaitForElement(loginButtonSelector, 300*time.Millisecond)
+	err := nav.OpenURL("https://pje.trt2.jus.br/primeirograu/login.seam")
+	if err != nil {
+		nav.Logger.Printf("Error - Failed to open URL: %v\n", err)
+		return fmt.Errorf("error - failed to open URL: %v", err)
+	}
+
+	err = nav.WaitForElement(usernameSelector, 300*time.Millisecond)
 	if err != nil {
 		nav.Logger.Printf("Error - Failed waiting for element: %v\n", err)
 		return fmt.Errorf("error - failed waiting for element: %v", err)
@@ -145,13 +151,16 @@ func (nav *Navigator) Login(url, username, password, usernameSelector, passwordS
 		return fmt.Errorf("error - failed waiting for element: %v", err)
 	}
 
+	err = nav.WaitForElement(loginButtonSelector, 300*time.Millisecond)
+	if err != nil {
+		nav.Logger.Printf("Error - Failed waiting for element: %v\n", err)
+		return fmt.Errorf("error - failed waiting for element: %v", err)
+	}
+
 	err = chromedp.Run(nav.Ctx,
 		chromedp.Navigate(url),
-		chromedp.WaitVisible(usernameSelector, chromedp.ByQuery),
 		chromedp.SendKeys(usernameSelector, username, chromedp.ByQuery),
-		chromedp.WaitVisible(passwordSelector, chromedp.ByQuery),
 		chromedp.SendKeys(passwordSelector, password, chromedp.ByQuery),
-		chromedp.WaitVisible(loginButtonSelector, chromedp.ByQuery),
 		chromedp.Click(loginButtonSelector, chromedp.ByQuery),
 		chromedp.WaitReady("body"), // Wait for the next page to load
 	)

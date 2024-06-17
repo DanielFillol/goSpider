@@ -206,34 +206,57 @@ func TestGetCurrentURL(t *testing.T) {
 //
 //}
 
-func TestSaveCaptchaImage(t *testing.T) {
-	nav := NewNavigator("", false)
-	defer nav.Close()
+func TestSaveImageBase64(t *testing.T) {
+	runTest := func(headless bool) {
+		nav := NewNavigator("", headless)
+		defer nav.Close()
 
-	err := nav.OpenURL("https://pje.trt2.jus.br/consultaprocessual/")
-	if err != nil {
-		t.Errorf("OpenURL error: %v", err)
+		err := nav.OpenURL("https://pje.trt2.jus.br/consultaprocessual/")
+		if err != nil {
+			t.Errorf("OpenURL error: %v", err)
+			return
+		}
+
+		err = nav.WaitForElement("#nrProcessoInput", 20*time.Second)
+		if err != nil {
+			t.Errorf("WaitForElement error: %v", err)
+			return
+		}
+
+		err = nav.FillField("#nrProcessoInput", "1000113-34.2018.5.02.0386")
+		if err != nil {
+			t.Errorf("FillField error: %v", err)
+			return
+		}
+
+		err = nav.ClickButton("#btnPesquisar")
+		if err != nil {
+			t.Errorf("ClickButton error: %v", err)
+			return
+		}
+
+		err = nav.WaitForElement("#imagemCaptcha", 20*time.Second)
+		if err != nil {
+			t.Errorf("WaitForElement error: %v", err)
+			return
+		}
+
+		err = nav.SaveImageBase64("#imagemCaptcha", "image.png", "data:image/png;base64,")
+		if err != nil {
+			t.Errorf("SaveImageBase64 error: %v", err)
+			return
+		}
 	}
 
-	err = nav.FillField("#nrProcessoInput", "1000113-34.2018.5.02.0386")
-	if err != nil {
-		t.Errorf("FillField error: %v", err)
-	}
+	// Run with visible UI
+	t.Run("Visible UI Mode", func(t *testing.T) {
+		runTest(false)
+	})
 
-	err = nav.ClickButton("#btnPesquisar")
-	if err != nil {
-		t.Errorf("ClickButton error: %v", err)
-	}
-
-	err = nav.WaitForElement("#imagemCaptcha", 10*time.Second)
-	if err != nil {
-		t.Errorf("WaitForElement error: %v", err)
-	}
-
-	err = nav.SaveImageBase64("#imagemCaptcha", "image.png", "data:image/png;base64,")
-	if err != nil {
-		t.Errorf("SaveImageBase64 error: %v", err)
-	}
+	// Run in headless mode
+	t.Run("Headless Mode", func(t *testing.T) {
+		runTest(true)
+	})
 }
 
 func TestParallelRequests(t *testing.T) {

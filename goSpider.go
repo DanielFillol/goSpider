@@ -45,9 +45,11 @@ func NewNavigator(profilePath string, headless bool) *Navigator {
 
 	if headless {
 		opts = append(opts, chromedp.Headless)
+		opts = append(opts, chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"))
 	} else {
 		opts = append(opts, chromedp.Flag("headless", false))
 	}
+
 	if profilePath != "" {
 		opts = append(opts, chromedp.UserDataDir(profilePath))
 	}

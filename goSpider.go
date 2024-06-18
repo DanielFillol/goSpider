@@ -814,7 +814,7 @@ func (nav *Navigator) GetElement(selector string) (string, error) {
 // Example:
 //
 //	err := nav.SaveImageBase64("#imagemCaptcha", "captcha.png", "data:image/png;base64,")
-func (nav *Navigator) SaveImageBase64(selector, outputPath, prefixClean string) error {
+func (nav *Navigator) SaveImageBase64(selector, outputPath, prefixClean string) (string, error) {
 	var imageData string
 
 	// Run the tasks
@@ -823,7 +823,7 @@ func (nav *Navigator) SaveImageBase64(selector, outputPath, prefixClean string) 
 	)
 	if err != nil {
 		nav.Logger.Printf("Error - Failed to get image data: %v\n", err)
-		return fmt.Errorf("error - failed to get image data: %w", err)
+		return "", fmt.Errorf("error - failed to get image data: %w", err)
 	}
 
 	var base64Data string
@@ -831,7 +831,7 @@ func (nav *Navigator) SaveImageBase64(selector, outputPath, prefixClean string) 
 		// Check if the image data is in base64 format
 		if !strings.HasPrefix(imageData, prefixClean) {
 			nav.Logger.Printf("Error - Unexpected image format: %v\n", err)
-			return fmt.Errorf("error - unexpected image format")
+			return "", fmt.Errorf("error - unexpected image format")
 		}
 
 		// Remove the data URL prefix
@@ -846,22 +846,22 @@ func (nav *Navigator) SaveImageBase64(selector, outputPath, prefixClean string) 
 	// Decode the base64 data
 	imageBytes, err := base64.StdEncoding.DecodeString(base64Data)
 	if err != nil {
-		return fmt.Errorf("failed to decode base64 image: %w", err)
+		return "", fmt.Errorf("failed to decode base64 image: %w", err)
 	}
 
 	// Check if decoded bytes are non-zero
 	if len(imageBytes) == 0 {
-		return fmt.Errorf("decoded image bytes are zero, something went wrong with extraction or decoding")
+		return "", fmt.Errorf("decoded image bytes are zero, something went wrong with extraction or decoding")
 	}
 
 	// Save the image to a file
 	err = ioutil.WriteFile(outputPath, imageBytes, 0644)
 	if err != nil {
-		return fmt.Errorf("failed to save image: %w", err)
+		return "", fmt.Errorf("failed to save image: %w", err)
 	}
 
 	nav.Logger.Printf("Captcha image saved successfully to %s", outputPath)
-	return nil
+	return base64Data, nil
 }
 
 // Close closes the Navigator instance and releases resources.

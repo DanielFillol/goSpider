@@ -241,7 +241,7 @@ func TestSaveImageBase64(t *testing.T) {
 			return
 		}
 
-		err = nav.SaveImageBase64("#imagemCaptcha", "image.png", "data:image/png;base64,")
+		_, err = nav.SaveImageBase64("#imagemCaptcha", "image.png", "data:image/png;base64,")
 		if err != nil {
 			t.Errorf("SaveImageBase64 error: %v", err)
 			return

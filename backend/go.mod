@@ -8,6 +8,8 @@ require (
 	github.com/chromedp/chromedp v0.9.5
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 	golang.org/x/net v0.26.0
+	github.com/chromedp/chromedp v0.7.3
+    golang.org/x/net v0.7.0
 )
 
 require (

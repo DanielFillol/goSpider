@@ -534,7 +534,7 @@ func (nav *Navigator) WaitPageLoad() (string, error) {
 	start := time.Now()
 	var pageHTML string
 	for {
-		if time.Since(start) > nav.Timeout {
+		if time.Since(start) > time.Minute {
 			nav.Logger.Println("Error - Timeout waiting for page to fully load")
 			return "", fmt.Errorf("error - timeout waiting for page to fully load")
 		}
@@ -551,7 +551,7 @@ func (nav *Navigator) WaitPageLoad() (string, error) {
 			break
 		}
 		nav.Logger.Println("INFO: Page is not fully loaded yet, retrying...")
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(nav.Timeout)
 	}
 
 	nav.Logger.Println("INFO: Page is fully loaded")

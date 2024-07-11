@@ -22,12 +22,12 @@ func CreateXPathNavigator(top *html.Node) *NodeNavigator {
 // Find is like QueryAll but Will panics if the expression `expr` cannot be parsed.
 //
 // See `QueryAll()` function.
-func Find(top *html.Node, expr string) []*html.Node {
+func Find(top *html.Node, expr string) ([]*html.Node, error) {
 	nodes, err := QueryAll(top, expr)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return nodes
+	return nodes, nil
 }
 
 // FindOne is like Query but will panics if the expression `expr` cannot be parsed.

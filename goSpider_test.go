@@ -206,6 +206,45 @@ func TestGetCurrentURL(t *testing.T) {
 //
 //}
 
+func TestCookies(t *testing.T) {
+	nav := NewNavigator("", false)
+	defer nav.Close()
+
+	log.Println("Attempting to log in...")
+
+	for {
+		nav.OpenURL("https://pje.tjmg.jus.br/pje/authenticateSSO.seam")
+		nav.FillField("input[name='password']", "Jus298740")
+		nav.FillField("input[name='username']", "32644314836")
+		nav.ClickButton("input[id='kc-login']")
+		err := nav.OpenURL("https://pje.tjmg.jus.br/pje/Processo/ConsultaProcesso/listView.seam")
+		time.Sleep(100 * time.Millisecond)
+		nav.ReloadPage(5)
+		//nav.Login("https://pje.tjmg.jus.br/pje/authenticateSSO.seam", "32644314836", "Jus298740", "input[name='username']", "input[name='password']", "input[id='kc-login']", "#kc-error-message > p")
+
+		elem, _ := nav.GetElement("#j_id41 > dt > span")
+		if err != nil {
+			break
+		}
+		fmt.Println(strings.ToUpper(elem))
+	}
+
+	// Wait for post-login indicator (or any action that signifies a successful login)
+	start := time.Now()
+	for {
+		if time.Since(start) >= 100*time.Minute {
+			break
+		}
+	}
+	log.Println("TestCookies completed")
+}
+
+//err = nav.OpenURL("https://pje.tjmg.jus.br/pje/Processo/ConsultaProcesso/listView.seam")
+//if err != nil {
+//	t.Errorf("OpenURL error: %v", err)
+//}
+//}
+
 func TestSaveImageBase64(t *testing.T) {
 	runTest := func(headless bool) {
 		nav := NewNavigator("", headless)
@@ -303,7 +342,7 @@ func TestRequestsDataStruct(t *testing.T) {
 		{SearchString: "1024511-70.2022.8.26.0003"},
 	}
 
-	numberOfWorkers := 5
+	numberOfWorkers := 1
 	duration := 500 * time.Millisecond
 
 	resultsFirst, err := ParallelRequests(users, numberOfWorkers, duration, Crawler)

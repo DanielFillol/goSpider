@@ -148,6 +148,7 @@ func (nav *Navigator) SwitchToFrame(selector string) error {
 // SwitchToDefaultContent switches the context back to the main content from an iframe context.
 func (nav *Navigator) SwitchToDefaultContent() error {
 	nav.Logger.Println("Switching to default content")
+
 	// Switch back to the main content
 	err := chromedp.Run(nav.Ctx,
 		chromedp.Tasks{

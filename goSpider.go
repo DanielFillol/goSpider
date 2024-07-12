@@ -78,47 +78,6 @@ func NewNavigator(profilePath string, headless bool) *Navigator {
 		Cookies: []*network.Cookie{},
 	}
 
-	// Enhanced logging for initial cookies setting
-	initialCookies := []*network.CookieParam{
-		{Name: "example", Value: "test", Domain: ".example.com", Path: "/"},
-	}
-	chromedp.Run(ctx,
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			for _, cookie := range initialCookies {
-				// network.SetCookie only returns an error if the operation fails
-				err := network.SetCookie(cookie.Name, cookie.Value).
-					WithDomain(cookie.Domain).
-					WithPath(cookie.Path).
-					Do(ctx)
-				if err != nil {
-					logger.Printf("Failed to set cookie %s: %v\n", cookie.Name, err)
-					return fmt.Errorf("failed to set cookie %s: %v", cookie.Name, err)
-				}
-				logger.Printf("Set cookie: %s=%s\n", cookie.Name, cookie.Value)
-			}
-			return nil
-		}),
-		chromedp.Sleep(2*time.Second), // Ensure cookies are set with a small delay
-	)
-
-	// Capture and store cookies after initialization with enhanced logging
-	chromedp.Run(ctx,
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			cookies, err := network.GetCookies().Do(ctx)
-			if err != nil {
-				logger.Printf("Failed to get cookies: %v\n", err)
-				return fmt.Errorf("failed to get cookies: %v", err)
-			}
-
-			for i, cookie := range cookies {
-				logger.Printf("Cookie %d: %+v\n", i, cookie)
-			}
-
-			navigator.Cookies = cookies // Store the cookies
-			return nil
-		}),
-	)
-
 	// Set standard timeout with enhanced logging
 	navigator.SetTimeOut(300 * time.Millisecond)
 	logger.Printf("Navigator initialized with timeout: %v\n", navigator.Timeout)
@@ -126,47 +85,82 @@ func NewNavigator(profilePath string, headless bool) *Navigator {
 	return navigator
 }
 
-// SetCookies sets the provided cookies in the browser context
-func (nav *Navigator) SetCookies(cookies []*network.CookieParam) {
-	for _, cookie := range cookies {
-		err := chromedp.Run(nav.Ctx,
-			network.SetCookie(cookie.Name, cookie.Value).
-				WithDomain(cookie.Domain).
-				WithPath(cookie.Path).
-				WithExpires(cookie.Expires).
-				WithHTTPOnly(cookie.HTTPOnly).
-				WithSecure(cookie.Secure).
-				WithSameSite(cookie.SameSite),
-		)
-		if err != nil {
-			nav.Logger.Printf("Failed to set cookie: %v\n", err)
-		} else {
-			nav.Logger.Printf("Set cookie: %s=%s\n", cookie.Name, cookie.Value)
-		}
-	}
-}
-
 // SetTimeOut sets a timeout for all the waiting functions on the package. The standard timeout of the Navigator is 300 ms.
 func (nav *Navigator) SetTimeOut(timeOut time.Duration) {
 	nav.Timeout = timeOut
 }
 
-// OpenNewTab opens a new browser tab with the specified URL.
-// Example:
-//
-//	err := nav.OpenNewTab("https://www.example.com")
-func (nav *Navigator) OpenNewTab(url string) error {
-	nav.Logger.Printf("Opening new tab with URL: %s\n", url)
-	ctx, cancel := chromedp.NewContext(nav.Ctx)
-	defer cancel()
-	err := chromedp.Run(ctx,
-		chromedp.Navigate(url),
+// GetElementAttribute retrieves the value of a specified attribute from an element identified by a CSS selector.
+// Parameters:
+// - selector: The CSS selector of the element.
+// - attribute: The name of the attribute to retrieve the value of.
+// Returns:
+// - The value of the specified attribute.
+// - An error if the attribute value could not be retrieved.
+func (nav *Navigator) GetElementAttribute(selector, attribute string) (string, error) {
+	var value string
+
+	err := nav.WaitForElement(selector, nav.Timeout)
+	if err != nil {
+		return "", err
+	}
+
+	err = chromedp.Run(nav.Ctx,
+		chromedp.AttributeValue(selector, attribute, &value, nil),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to open new tab: %v\n", err)
-		return fmt.Errorf("error - failed to open new tab: %v", err)
+		return "", fmt.Errorf("error getting attribute %s: %v", attribute, err)
 	}
-	nav.Logger.Printf("New tab opened successfully with URL: %s\n", url)
+	return value, nil
+}
+
+// SwitchToFrame switches the context to the specified iframe.
+func (nav *Navigator) SwitchToFrame(selector string) error {
+	// Wait for the iframe to be visible
+	err := nav.WaitForElement(selector, nav.Timeout)
+	if err != nil {
+		return err
+	}
+
+	// Switch to the iframe context by evaluating JavaScript
+	err = chromedp.Run(nav.Ctx,
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var res interface{}
+			err := chromedp.Evaluate(fmt.Sprintf(`
+				var iframe = document.querySelector('%s');
+				iframe.contentWindow.document.body.innerHTML`, selector), &res).Do(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to switch to iframe: %v", err)
+			}
+			return nil
+		}),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to switch to iframe: %v", err)
+	}
+
+	return nil
+}
+
+// SwitchToDefaultContent switches the context back to the main content from an iframe context.
+func (nav *Navigator) SwitchToDefaultContent() error {
+	// Switch back to the main content
+	err := chromedp.Run(nav.Ctx,
+		chromedp.Tasks{
+			chromedp.ActionFunc(func(ctx context.Context) error {
+				// Evaluate JavaScript to switch back to the top window
+				err := chromedp.Evaluate(`window.top.location.reload()`, nil).Do(ctx)
+				if err != nil {
+					return fmt.Errorf("failed to switch to default content: %v", err)
+				}
+				return nil
+			}),
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to switch to default content: %v", err)
+	}
+
 	return nil
 }
 
@@ -246,7 +240,6 @@ func (nav *Navigator) Login(url, username, password, usernameSelector, passwordS
 	}
 
 	err = chromedp.Run(nav.Ctx,
-		chromedp.Navigate(url),
 		chromedp.SendKeys(usernameSelector, username, chromedp.ByQuery),
 		chromedp.SendKeys(passwordSelector, password, chromedp.ByQuery),
 		chromedp.Click(loginButtonSelector, chromedp.ByQuery),
@@ -915,7 +908,7 @@ func (nav *Navigator) GetElement(selector string) (string, error) {
 // Parameters:
 //   - selector: the CSS selector of the CAPTCHA image element
 //   - outputPath: the file path to save the image
-//   - prefixClean: the prefix to clear form the source, if any
+//   - prefixClean: the prefix to clear from the source, if any
 //
 // Example:
 //

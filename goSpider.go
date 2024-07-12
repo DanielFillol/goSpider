@@ -116,6 +116,8 @@ func (nav *Navigator) GetElementAttribute(selector, attribute string) (string, e
 
 // SwitchToFrame switches the context to the specified iframe.
 func (nav *Navigator) SwitchToFrame(selector string) error {
+	nav.Logger.Println("Switching to frame", selector)
+
 	// Wait for the iframe to be visible
 	err := nav.WaitForElement(selector, nav.Timeout)
 	if err != nil {
@@ -139,11 +141,13 @@ func (nav *Navigator) SwitchToFrame(selector string) error {
 		return fmt.Errorf("failed to switch to iframe: %v", err)
 	}
 
+	nav.Logger.Println("SwitchToFrame", selector, "successfully")
 	return nil
 }
 
 // SwitchToDefaultContent switches the context back to the main content from an iframe context.
 func (nav *Navigator) SwitchToDefaultContent() error {
+	nav.Logger.Println("Switching to default content")
 	// Switch back to the main content
 	err := chromedp.Run(nav.Ctx,
 		chromedp.Tasks{
@@ -161,6 +165,7 @@ func (nav *Navigator) SwitchToDefaultContent() error {
 		return fmt.Errorf("failed to switch to default content: %v", err)
 	}
 
+	nav.Logger.Println("Switch to default content successfully")
 	return nil
 }
 

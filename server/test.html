@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page</title>
+</head>
+<body>
+<h1>Main Content</h1>
+
+<!-- Login Form -->
+<form id="loginForm">
+    <input type="text" id="txtUsuario" name="username" placeholder="Username">
+    <input type="password" id="pwdSenha" name="password" placeholder="Password">
+    <button type="submit" id="sbmEntrar">Login</button>
+</form>
+
+<!-- Placeholder for login status -->
+<div id="loginStatus"></div>
+
+<!-- Captcha -->
+<div id="divInfraCaptcha">
+    <div data-sitekey="test-site-key"></div>
+</div>
+
+<!-- Dynamic Content Page -->
+<button id="botaoConsultarProcessos">Consult Process</button>
+
+<!-- Form to fill and handle alert -->
+<form id="contactForm" action="#">
+    <input type="text" name="nome" placeholder="Name">
+    <input type="text" name="endereco" placeholder="Address">
+    <input type="text" name="telefone" placeholder="Phone">
+    <input type="email" name="email" placeholder="Email">
+    <button type="submit">Submit</button>
+</form>
+
+<!-- Dropdown -->
+<select id="cbPesquisa">
+    <option value="OPTION1">Option 1</option>
+    <option value="DOCPARTE">Option 2</option>
+</select>
+
+<!-- Radio Buttons -->
+<fieldset>
+    <label><input type="radio" name="search" value="option1">Option 1</label>
+    <label><input type="radio" name="search" value="option2" id="radioOption2">Option 2</label>
+    <label><input type="radio" name="search" value="option3">Option 3</label>
+</fieldset>
+
+<!-- Iframe -->
+<iframe id="test-iframe" srcdoc="<p>Iframe Content</p>"></iframe>
+
+<!-- Process Search -->
+<div id="processSearch">
+    <input type="text" id="nrProcessoInput" placeholder="Process Number">
+    <button id="btnPesquisar">Search</button>
+</div>
+
+<!-- Captcha Image -->
+<img id="imagemCaptcha" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wcAAgMBAfcUiioAAAAASUVORK5CYII=" alt="Captcha">
+
+<!-- Placeholder for capturing screenshot -->
+<div id="screenshotPlaceholder">Placeholder for Screenshot</div>
+
+<!-- Links for extraction -->
+<a href="https://www.example.com">Example</a>
+<a href="https://www.google.com">Google</a>
+<a href="https://www.bing.com">Bing</a>
+
+<script>
+    document.getElementById('loginForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        document.getElementById('loginStatus').textContent = 'Logged in successfully';
+    });
+
+    document.getElementById('contactForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        alert('Form Submitted');
+    });
+
+    document.getElementById('botaoConsultarProcessos').addEventListener('click', function() {
+        window.location.href = 'https://esaj.tjsp.jus.br/cpopg/show.do?';
+    });
+</script>
+</body>
+</html>

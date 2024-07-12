@@ -3,104 +3,348 @@ package goSpider
 import (
 	"errors"
 	"fmt"
+	"github.com/chromedp/chromedp"
 	"golang.org/x/net/html"
 	"log"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 )
 
-// TestGetPageSource tests fetching the HTML content from a URL
-func TestGetPageSource(t *testing.T) {
+// Start a local server to serve the mock HTML page
+func startTestServer() *httptest.Server {
+	handler := http.FileServer(http.Dir("server"))
+	server := httptest.NewServer(handler)
+	return server
+}
+
+// Setup Navigator for tests
+func setupNavigator(t *testing.T) *Navigator {
+	nav := NewNavigator("", true)
+	nav.SetTimeOut(600 * time.Millisecond)
+	t.Cleanup(nav.Close)
+	return nav
+}
+
+// Test functions
+func TestGetElementAttribute(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	nav.OpenURL(server.URL + "/test.html")
+
+	a, err := nav.GetElementAttribute("#divInfraCaptcha > div", "data-sitekey")
+	if err != nil {
+		t.Fatalf("Error on GetElementAttribute: %v", err)
+	}
+
+	if a == "" {
+		t.Error("Expected a non-empty attribute value")
+	}
+
+	fmt.Println(a)
+}
+
+func TestSwitchToFrame(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
 	nav := NewNavigator("", true)
 	defer nav.Close()
 
-	nav.OpenURL("https://www.google.com")
+	err := chromedp.Run(nav.Ctx,
+		chromedp.Navigate(server.URL+"/test.html"),
+		chromedp.WaitVisible("iframe#test-iframe"),
+	)
+	if err != nil {
+		t.Fatalf("Failed to navigate to test page: %v", err)
+	}
+
+	err = nav.SwitchToFrame("iframe#test-iframe")
+	if err != nil {
+		t.Fatalf("Failed to switch to iframe: %v", err)
+	}
+
+	var iframeContent string
+	err = chromedp.Run(nav.Ctx,
+		chromedp.Text("p", &iframeContent),
+	)
+	if err != nil {
+		t.Fatalf("Failed to get iframe content: %v", err)
+	}
+
+	if iframeContent != "Iframe Content" {
+		t.Fatalf("Unexpected iframe content: %s", iframeContent)
+	} else {
+		fmt.Println(iframeContent)
+	}
+}
+
+func TestSwitchToFrameAndDefaultContent(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := NewNavigator("", true)
+	defer nav.Close()
+
+	err := chromedp.Run(nav.Ctx,
+		chromedp.Navigate(server.URL+"/test.html"),
+		chromedp.WaitVisible("iframe#test-iframe"),
+	)
+	if err != nil {
+		t.Fatalf("Failed to navigate to test page: %v", err)
+	}
+
+	err = nav.SwitchToFrame("iframe#test-iframe")
+	if err != nil {
+		t.Fatalf("Failed to switch to iframe: %v", err)
+	}
+
+	var iframeContent string
+	err = chromedp.Run(nav.Ctx,
+		chromedp.Text("p", &iframeContent),
+	)
+	if err != nil {
+		t.Fatalf("Failed to get iframe content: %v", err)
+	}
+
+	if iframeContent != "Iframe Content" {
+		t.Fatalf("Unexpected iframe content: %s", iframeContent)
+	}
+
+	err = nav.SwitchToDefaultContent()
+	if err != nil {
+		t.Fatalf("Failed to switch to default content: %v", err)
+	}
+
+	var mainContent string
+	err = chromedp.Run(nav.Ctx,
+		chromedp.Text("h1", &mainContent),
+	)
+	if err != nil {
+		t.Fatalf("Failed to get main content: %v", err)
+	}
+
+	if mainContent != "Main Content" {
+		t.Fatalf("Unexpected main content: %s", mainContent)
+	} else {
+		fmt.Println(mainContent)
+	}
+}
+
+func TestGetCurrentURL(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	nav.OpenURL(server.URL + "/test.html")
+
+	currentURL, err := nav.GetCurrentURL()
+	if err != nil {
+		t.Fatalf("GetCurrentURL error: %v", err)
+	}
+
+	expectedURL := server.URL + "/test.html"
+	if !strings.Contains(currentURL, expectedURL) {
+		t.Errorf("Expected URL to contain: %s, but got: %s", expectedURL, currentURL)
+	}
+}
+
+func TestLogin(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	err := nav.Login(server.URL+"/test.html", "username", "password", "#txtUsuario", "#pwdSenha", "#sbmEntrar", "")
+	if err != nil {
+		t.Fatalf("Login error: %v", err)
+	}
+}
+
+func TestCaptureScreenshot(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	err := nav.OpenURL(server.URL + "/test.html")
+	if err != nil {
+		t.Fatalf("OpenURL error: %v", err)
+	}
+
+	err = nav.CaptureScreenshot("test_screenshot")
+	if err != nil {
+		t.Fatalf("CaptureScreenshot error: %v", err)
+	}
+}
+
+func TestReloadPage(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	err := nav.OpenURL(server.URL + "/test.html")
+	if err != nil {
+		t.Fatalf("OpenURL error: %v", err)
+	}
+
+	err = nav.ReloadPage(3)
+	if err != nil {
+		t.Fatalf("ReloadPage error: %v", err)
+	}
+}
+
+func TestGetPageSource(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	err := nav.OpenURL(server.URL + "/test.html")
+	if err != nil {
+		t.Errorf("OpenURL error: %v", err)
+	}
+
 	htmlContent, err := nav.GetPageSource()
 	if err != nil {
-		t.Errorf("FetchHTML error: %v", err)
+		t.Fatalf("FetchHTML error: %v", err)
 	}
 	if htmlContent == nil {
 		t.Error("FetchHTML returned empty content")
 	}
 }
 
-// TestClickButton tests clicking a button and waiting for dynamically loaded content
-func TestClickButton(t *testing.T) {
-	nav := NewNavigator("", true)
-	defer nav.Close()
+func TestWaitForElement(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
 
-	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
+	nav := setupNavigator(t)
+	nav.OpenURL(server.URL + "/test.html")
 
-	err := nav.OpenURL(url)
+	err := nav.WaitForElement("#radioOption2", 10*time.Second)
 	if err != nil {
-		t.Errorf("OpenURL error: %v", err)
-	}
-
-	err = nav.CheckRadioButton("#interna_NUMPROC > div > fieldset > label:nth-child(5)")
-	if err != nil {
-		t.Errorf("CheckRadioButton error: %v", err)
-	}
-
-	err = nav.FillField("#nuProcessoAntigoFormatado", "1017927-35.2023.8.26.0008")
-	if err != nil {
-		t.Errorf("filling field error: %v", err)
-	}
-
-	err = nav.ClickButton("#botaoConsultarProcessos")
-	if err != nil {
-		t.Errorf("ClickButton error: %v", err)
+		t.Fatalf("WaitForElement (delayed element) error: %v", err)
 	}
 }
 
-// TestNestedElement tests waiting for a nested element to appear after a click
-func TestNestedElement(t *testing.T) {
-	nav := NewNavigator("", true)
-	defer nav.Close()
+func TestClickButton(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
 
-	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
+	nav := setupNavigator(t)
+	nav.OpenURL(server.URL + "/test.html")
 
-	err := nav.OpenURL(url)
+	err := nav.ClickButton("#botaoConsultarProcessos")
 	if err != nil {
-		t.Errorf("OpenURL error: %v", err)
-	}
-
-	err = nav.CheckRadioButton("#interna_NUMPROC > div > fieldset > label:nth-child(5)")
-	if err != nil {
-		t.Errorf("CheckRadioButton error: %v", err)
-	}
-
-	err = nav.FillField("#nuProcessoAntigoFormatado", "1017927-35.2023.8.26.0008")
-	if err != nil {
-		t.Errorf("filling field error: %v", err)
-	}
-
-	err = nav.ClickButton("#botaoConsultarProcessos")
-	if err != nil {
-		t.Errorf("ClickButton error: %v", err)
+		t.Fatalf("ClickButton error: %v", err)
 	}
 
 	cUrl, err := nav.GetCurrentURL()
 	if err != nil {
-		t.Errorf("GetCurrentURL error: %v", err)
+		t.Fatalf("GetCurrentURL error: %v", err)
 	}
 
-	if !strings.Contains(cUrl, "https://esaj.tjsp.jus.br/cpopg/show.do?") {
-		t.Errorf("WaitForElement (nested element) error: %s", cUrl)
+	expectedURL := "https://esaj.tjsp.jus.br/cpopg/show.do?"
+	if !strings.Contains(cUrl, expectedURL) {
+		t.Errorf("Expected URL to contain: %s, but got: %s", expectedURL, cUrl)
 	}
 }
 
-// TestFillFormAndHandleAlert tests filling a form and handling the resulting alert
-func TestFillFormAndHandleAlert(t *testing.T) {
-	nav := NewNavigator("", true)
-	defer nav.Close()
+func TestSelectRadioButton(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
 
-	url := "https://www.camarapassatempo.mg.gov.br/acessocentral/problemas/contato.htm"
+	nav := setupNavigator(t)
+	nav.OpenURL(server.URL + "/test.html")
 
-	err := nav.OpenURL(url)
+	err := nav.CheckRadioButton("#radioOption2")
 	if err != nil {
-		t.Errorf("OpenURL error: %v", err)
+		t.Fatalf("SelectRadioButton error: %v", err)
+	}
+}
+
+func TestUncheckRadioButton(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	err := nav.OpenURL(server.URL + "/test.html")
+	if err != nil {
+		t.Fatalf("OpenURL error: %v", err)
+	}
+
+	err = nav.UncheckRadioButton("#radioOption2")
+	if err != nil {
+		t.Fatalf("UncheckRadioButton error: %v", err)
+	}
+}
+
+func TestFillField(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	err := nav.OpenURL(server.URL + "/test.html")
+	if err != nil {
+		t.Fatalf("OpenURL error: %v", err)
+	}
+
+	err = nav.FillField("#nrProcessoInput", "1000113-34.2018.5.02.0386")
+	if err != nil {
+		t.Fatalf("FillField error: %v", err)
+	}
+}
+
+func TestExtractLinks(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	err := nav.OpenURL(server.URL + "/test.html")
+	if err != nil {
+		t.Fatalf("OpenURL error: %v", err)
+	}
+
+	// Allow some time for the page to fully load
+	time.Sleep(2 * time.Second)
+
+	links, err := nav.ExtractLinks()
+	if err != nil {
+		t.Fatalf("ExtractLinks error: %v", err)
+	}
+
+	expectedLinks := []string{
+		"https://www.example.com/",
+		"https://www.google.com/",
+		"https://www.bing.com/",
+	}
+
+	for _, expectedLink := range expectedLinks {
+		found := false
+		for _, link := range links {
+			if link == expectedLink {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Expected link not found: %s", expectedLink)
+		}
+	}
+}
+
+func TestFillForm(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	err := nav.OpenURL(server.URL + "/test.html")
+	if err != nil {
+		t.Fatalf("OpenURL error: %v", err)
 	}
 
 	formData := map[string]string{
@@ -110,147 +354,139 @@ func TestFillFormAndHandleAlert(t *testing.T) {
 		"email":    "null@null.com",
 	}
 
-	err = nav.FillForm("body > form", formData)
+	err = nav.FillForm("#contactForm", formData)
 	if err != nil {
-		t.Errorf("FillForm error: %v", err)
+		t.Fatalf("FillForm error: %v", err)
 	}
 }
 
-// TestSelectDropdown tests selecting an option from a dropdown menu
+func TestHandleAlert(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	err := nav.OpenURL(server.URL + "/test.html")
+	if err != nil {
+		t.Fatalf("OpenURL error: %v", err)
+	}
+
+	err = nav.HandleAlert()
+	if err != nil {
+		t.Fatalf("HandleAlert error: %v", err)
+	}
+}
+
+func TestFillFormAndHandleAlert(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	nav.OpenURL(server.URL + "/test.html")
+
+	formData := map[string]string{
+		"nome":     "Fulano de Tal",
+		"endereco": "Avenida do Contorno",
+		"telefone": "11912345678",
+		"email":    "null@null.com",
+	}
+
+	err := nav.FillForm("#contactForm", formData)
+	if err != nil {
+		t.Fatalf("FillForm error: %v", err)
+	}
+}
+
 func TestSelectDropdown(t *testing.T) {
-	nav := NewNavigator("", true)
-	defer nav.Close()
+	server := startTestServer()
+	defer server.Close()
 
-	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
+	nav := setupNavigator(t)
+	nav.OpenURL(server.URL + "/test.html")
 
-	err := nav.OpenURL(url)
+	err := nav.SelectDropdown("#cbPesquisa", "DOCPARTE")
 	if err != nil {
-		t.Errorf("OpenURL error: %v", err)
-	}
-
-	err = nav.SelectDropdown("#cbPesquisa", "DOCPARTE")
-	if err != nil {
-		t.Errorf("SelectDropdown error: %v", err)
+		t.Fatalf("SelectDropdown error: %v", err)
 	}
 }
 
-// TestSelectRadioButton tests selecting a radio button
-func TestSelectRadioButton(t *testing.T) {
-	nav := NewNavigator("", true)
-	defer nav.Close()
+func TestExecuteScript(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
 
-	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
-
-	err := nav.OpenURL(url)
+	nav := setupNavigator(t)
+	err := nav.OpenURL(server.URL + "/test.html")
 	if err != nil {
-		t.Errorf("OpenURL error: %v", err)
+		t.Fatalf("OpenURL error: %v", err)
 	}
 
-	err = nav.CheckRadioButton("#interna_NUMPROC > div > fieldset > label:nth-child(5)")
+	script := "document.title = 'New Title';"
+	err = nav.ExecuteScript(script)
 	if err != nil {
-		t.Errorf("SelectRadioButton error: %v", err)
+		t.Fatalf("ExecuteScript error: %v", err)
+	}
+
+	title, err := nav.EvaluateScript("document.title")
+	if err != nil {
+		t.Fatalf("EvaluateScript error: %v", err)
+	}
+
+	if title != "New Title" {
+		t.Errorf("Expected title to be 'New Title', but got: %v", title)
 	}
 }
 
-// TestWaitForElement tests waiting for an element to be visible after a delay
-func TestWaitForElement(t *testing.T) {
-	nav := NewNavigator("", true)
-	defer nav.Close()
+func TestGetElement(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
 
-	url := "https://esaj.tjsp.jus.br/cpopg/open.do"
-
-	err := nav.OpenURL(url)
+	nav := setupNavigator(t)
+	err := nav.OpenURL(server.URL + "/test.html")
 	if err != nil {
-		t.Errorf("OpenURL error: %v", err)
+		t.Fatalf("OpenURL error: %v", err)
 	}
 
-	err = nav.WaitForElement("#interna_NUMPROC > div > fieldset > label:nth-child(5)", 10*time.Second)
+	content, err := nav.GetElement("#screenshotPlaceholder")
 	if err != nil {
-		t.Errorf("WaitForElement (delayed element) error: %v", err)
+		t.Fatalf("GetElement error: %v", err)
+	}
+
+	expectedContent := "Placeholder for Screenshot"
+	if content != expectedContent {
+		t.Errorf("Expected content to be: %s, but got: %s", expectedContent, content)
 	}
 }
 
-// TestGetCurrentURL tests extracting the current URL from the browser
-func TestGetCurrentURL(t *testing.T) {
-	nav := NewNavigator("", true)
+func TestNestedElement(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
 
-	// Navigate to the main page
-	err := nav.OpenURL("https://www.google.com")
+	nav := setupNavigator(t)
+	nav.OpenURL(server.URL + "/test.html")
+
+	err := nav.ClickButton("#botaoConsultarProcessos")
 	if err != nil {
-		t.Errorf("OpenURL error: %v", err)
+		t.Fatalf("ClickButton error: %v", err)
 	}
 
-	// Extract and verify the current URL
-	currentURL, err := nav.GetCurrentURL()
+	cUrl, err := nav.GetCurrentURL()
 	if err != nil {
-		t.Errorf("GetCurrentURL error: %v", err)
+		t.Fatalf("GetCurrentURL error: %v", err)
 	}
 
-	expectedURL := "https://www.google.com/"
-	if currentURL != expectedURL {
-		t.Errorf("Expected URL: %s, but got: %s", expectedURL, currentURL)
+	if !strings.Contains(cUrl, "https://esaj.tjsp.jus.br/cpopg/show.do?") {
+		t.Errorf("WaitForElement (nested element) error: %s", cUrl)
 	}
 }
-
-// Won't pass on test because 2FA requires input on the terminal by the user, for that reason alone the test will fail
-//// TestLoginGoogle tests google single logon
-//func TestLoginGoogle(t *testing.T) {
-//	profilePath := "/Users/USER_NAME/Library/Application Support/Google/Chrome/Profile 2\""
-//	nav := NewNavigator(profilePath)
-//	defer nav.Close()
-//
-//	err := nav.LoginWithGoogle("", "")
-//	if err != nil {
-//		t.Errorf("LoginWithGoogle error: %v", err)
-//	}
-//
-//}
-
-func TestCookies(t *testing.T) {
-	nav := NewNavigator("", false)
-	defer nav.Close()
-
-	log.Println("Attempting to log in...")
-
-	for {
-		nav.OpenURL("https://pje.tjmg.jus.br/pje/authenticateSSO.seam")
-		nav.FillField("input[name='password']", "Jus298740")
-		nav.FillField("input[name='username']", "32644314836")
-		nav.ClickButton("input[id='kc-login']")
-		err := nav.OpenURL("https://pje.tjmg.jus.br/pje/Processo/ConsultaProcesso/listView.seam")
-		time.Sleep(100 * time.Millisecond)
-		nav.ReloadPage(5)
-		//nav.Login("https://pje.tjmg.jus.br/pje/authenticateSSO.seam", "32644314836", "Jus298740", "input[name='username']", "input[name='password']", "input[id='kc-login']", "#kc-error-message > p")
-
-		elem, _ := nav.GetElement("#j_id41 > dt > span")
-		if err != nil {
-			break
-		}
-		fmt.Println(strings.ToUpper(elem))
-	}
-
-	// Wait for post-login indicator (or any action that signifies a successful login)
-	start := time.Now()
-	for {
-		if time.Since(start) >= 100*time.Minute {
-			break
-		}
-	}
-	log.Println("TestCookies completed")
-}
-
-//err = nav.OpenURL("https://pje.tjmg.jus.br/pje/Processo/ConsultaProcesso/listView.seam")
-//if err != nil {
-//	t.Errorf("OpenURL error: %v", err)
-//}
-//}
 
 func TestSaveImageBase64(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
 	runTest := func(headless bool) {
-		nav := NewNavigator("", headless)
+		nav := setupNavigator(t)
 		defer nav.Close()
 
-		err := nav.OpenURL("https://pje.trt2.jus.br/consultaprocessual/")
+		err := nav.OpenURL(server.URL + "/test.html")
 		if err != nil {
 			t.Errorf("OpenURL error: %v", err)
 			return
@@ -280,23 +516,34 @@ func TestSaveImageBase64(t *testing.T) {
 			return
 		}
 
-		_, err = nav.SaveImageBase64("#imagemCaptcha", "image.png", "data:image/png;base64,")
+		outputPath := filepath.Join(os.TempDir(), "image.png")
+		_, err = nav.SaveImageBase64("#imagemCaptcha", outputPath, "data:image/png;base64,")
 		if err != nil {
 			t.Errorf("SaveImageBase64 error: %v", err)
 			return
 		}
 	}
 
-	// Run with visible UI
-	t.Run("Visible UI Mode", func(t *testing.T) {
-		runTest(false)
-	})
-
-	// Run in headless mode
 	t.Run("Headless Mode", func(t *testing.T) {
 		runTest(true)
 	})
 }
+
+// Won't pass on test because 2FA requires input on the terminal by the user, for that reason alone the test will fail
+//// TestLoginGoogle tests google single logon
+//func TestLoginGoogle(t *testing.T) {
+//	profilePath := "/Users/USER_NAME/Library/Application Support/Google/Chrome/Profile 2\""
+//	nav := NewNavigator(profilePath)
+//	defer nav.Close()
+//
+//	err := nav.LoginWithGoogle("", "")
+//	if err != nil {
+//		t.Errorf("LoginWithGoogle error: %v", err)
+//	}
+//
+//}
+
+//Full Crawlers
 
 func TestParallelRequests(t *testing.T) {
 	users := []Request{

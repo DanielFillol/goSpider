@@ -19,8 +19,12 @@
 <div id="loginStatus"></div>
 
 <!-- Captcha -->
-<div id="divInfraCaptcha">
-    <div data-sitekey="test-site-key"></div>
+<div id="divInfraCaptcha" class="infraAreaDados" data-url-verificar-captcha="controlador_ajax.php?acao_ajax=verifica_estado_captcha">
+    <div class="h-captcha" data-sitekey="ea7d5a3e-4785-4957-9b59-fcaddfc0b074">
+        <iframe src="https://newassets.hcaptcha.com/captcha/v1/12d4359/static/hcaptcha.html#frame=checkbox&amp;id=0sxde7a0i8pm&amp;host=eproc2g.tjrs.jus.br&amp;sentry=true&amp;reportapi=https%3A%2F%2Faccounts.hcaptcha.com&amp;recaptchacompat=true&amp;custom=false&amp;hl=pt-BR&amp;tplinks=on&amp;pstissuer=https%3A%2F%2Fpst-issuer.hcaptcha.com&amp;sitekey=ea7d5a3e-4785-4957-9b59-fcaddfc0b074&amp;theme=light&amp;origin=https%3A%2F%2Feproc2g.tjrs.jus.br" tabindex="0" frameborder="0" scrolling="no" title="Widget contendo caixa de seleção para desafio de segurança hCaptcha" data-hcaptcha-widget-id="0sxde7a0i8pm" data-hcaptcha-response="" style="pointer-events: auto; width: 303px; height: 78px; overflow: hidden;"></iframe>
+        <textarea id="g-recaptcha-response-0sxde7a0i8pm" name="g-recaptcha-response" style="display: none;"></textarea>
+        <textarea id="h-captcha-response-0sxde7a0i8pm" name="h-captcha-response" style="display: none;"></textarea></div>
+    <input type="hidden" id="hdnInfraCaptcha" name="hdnInfraCaptcha" value="0">
 </div>
 
 <!-- Dynamic Content Page -->

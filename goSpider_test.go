@@ -529,6 +529,44 @@ func TestSaveImageBase64(t *testing.T) {
 	})
 }
 
+func TestMakeElementVisible(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	defer nav.Close()
+
+	err := nav.OpenURL(server.URL + "/test.html")
+	if err != nil {
+		t.Errorf("OpenURL error: %v", err)
+		return
+	}
+
+	id, err := nav.GetElementAttribute("#divInfraCaptcha > div > iframe", "data-hcaptcha-widget-id")
+	if err != nil {
+		t.Errorf("GetElementAttribute error: %v", err)
+		return
+	}
+
+	err = nav.MakeElementVisible("#h-captcha-response-" + id)
+	if err != nil {
+		t.Errorf("MakeElementVisible error: %v", err)
+		return
+	}
+
+	err = nav.WaitForElement("#h-captcha-response-"+id, nav.Timeout)
+	if err != nil {
+		t.Errorf("MakeElementVisible error: %v", err)
+		return
+	}
+
+	err = nav.FillField("#h-captcha-response-"+id, "54203432300")
+	if err != nil {
+		t.Errorf("FillField error: %v", err)
+		return
+	}
+}
+
 // Won't pass on test because 2FA requires input on the terminal by the user, for that reason alone the test will fail
 //// TestLoginGoogle tests google single logon
 //func TestLoginGoogle(t *testing.T) {

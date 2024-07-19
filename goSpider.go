@@ -969,6 +969,20 @@ func (nav *Navigator) SaveImageBase64(selector, outputPath, prefixClean string) 
 	return base64Data, nil
 }
 
+// MakeElementVisible changes the style display of an element to nil
+func (nav *Navigator) MakeElementVisible(selector string) error {
+	nav.Logger.Printf("Making CAPTCHA response field with selector: %s visible\n", selector)
+	err := chromedp.Run(nav.Ctx,
+		chromedp.Evaluate(fmt.Sprintf(`document.querySelector('%s').style.display = ""`, selector), nil),
+	)
+	if err != nil {
+		nav.Logger.Printf("Error - Failed to make element visible: %v\n", err)
+		return fmt.Errorf("error - failed to make element visible: %v", err)
+	}
+	nav.Logger.Printf("Element with selector: %s is now visible\n", selector)
+	return nil
+}
+
 // Close closes the Navigator instance and releases resources.
 // Example:
 //

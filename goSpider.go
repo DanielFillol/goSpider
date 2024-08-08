@@ -643,6 +643,33 @@ func (nav *Navigator) ClickButton(selector string) error {
 	return nil
 }
 
+// UnsafeClickButton clicks a button specified by the selector. Unsafe because this methode does not use the wait element feature.
+// Example:
+//
+//	err := nav.ClickButton("#buttonID")
+func (nav *Navigator) UnsafeClickButton(selector string) error {
+	nav.Logger.Printf("Clicking button with selector: %s\n", selector)
+
+	err := chromedp.Run(nav.Ctx,
+		chromedp.Click(selector),
+	)
+	if err != nil {
+		nav.Logger.Printf("Error - Failed to click button: %v\n", err)
+		return fmt.Errorf("error - failed to click button: %v", err)
+	}
+	nav.Logger.Printf("Button clicked successfully with selector: %s\n", selector)
+
+	time.Sleep(nav.Timeout)
+
+	// Ensure the context is not cancelled and the page is fully loaded
+	_, err = nav.WaitPageLoad()
+	if err != nil {
+		return err
+	}
+	chromedp.WaitReady("body")
+	return nil
+}
+
 // ClickElement clicks an element specified by the selector.
 // Example:
 //
@@ -730,6 +757,24 @@ func (nav *Navigator) FillField(selector string, value string) error {
 	}
 
 	err = chromedp.Run(nav.Ctx,
+		chromedp.SendKeys(selector, value, chromedp.ByQuery),
+	)
+	if err != nil {
+		nav.Logger.Printf("Error - Failed to fill field with selector: %v\n", err)
+		return fmt.Errorf("error - failed to fill field with selector: %v", err)
+	}
+	nav.Logger.Printf("Field filled with selector: %s\n", selector)
+	return nil
+}
+
+// UnsafeFillField fills a field specified by the selector with the provided value. Unsafe because this methode does not use the wait element feature.
+// Example:
+//
+//	err := nav.FillField("#fieldID", "value")
+func (nav *Navigator) UnsafeFillField(selector string, value string) error {
+	nav.Logger.Printf("Filling field with selector: %s\n", selector)
+
+	err := chromedp.Run(nav.Ctx,
 		chromedp.SendKeys(selector, value, chromedp.ByQuery),
 	)
 	if err != nil {

@@ -254,6 +254,28 @@ func TestClickButton(t *testing.T) {
 	}
 }
 
+func TestUnsafeClickButton(t *testing.T) {
+	server := startTestServer()
+
+	nav := setupNavigator(t)
+	nav.OpenURL(server.URL + "/test.html")
+
+	err := nav.UnsafeClickButton("#botaoConsultarProcessos")
+	if err != nil {
+		t.Fatalf("ClickButton error: %v", err)
+	}
+
+	cUrl, err := nav.GetCurrentURL()
+	if err != nil {
+		t.Fatalf("GetCurrentURL error: %v", err)
+	}
+
+	expectedURL := "https://esaj.tjsp.jus.br/cpopg/show.do?"
+	if !strings.Contains(cUrl, expectedURL) {
+		t.Errorf("Expected URL to contain: %s, but got: %s", expectedURL, cUrl)
+	}
+}
+
 func TestSelectRadioButton(t *testing.T) {
 	server := startTestServer()
 	defer server.Close()
@@ -294,6 +316,22 @@ func TestFillField(t *testing.T) {
 	}
 
 	err = nav.FillField("#nrProcessoInput", "1000113-34.2018.5.02.0386")
+	if err != nil {
+		t.Fatalf("FillField error: %v", err)
+	}
+}
+
+func TestUnsafeFillField(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	err := nav.OpenURL(server.URL + "/test.html")
+	if err != nil {
+		t.Fatalf("OpenURL error: %v", err)
+	}
+
+	err = nav.UnsafeFillField("#nrProcessoInput", "1000113-34.2018.5.02.0386")
 	if err != nil {
 		t.Fatalf("FillField error: %v", err)
 	}

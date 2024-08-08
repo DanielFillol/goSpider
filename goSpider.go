@@ -651,7 +651,7 @@ func (nav *Navigator) UnsafeClickButton(selector string) error {
 	nav.Logger.Printf("Clicking button with selector: %s\n", selector)
 
 	err := chromedp.Run(nav.Ctx,
-		chromedp.Click(selector),
+		chromedp.Click(selector, chromedp.ByID),
 	)
 	if err != nil {
 		nav.Logger.Printf("Error - Failed to click button: %v\n", err)

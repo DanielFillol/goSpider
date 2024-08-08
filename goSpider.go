@@ -659,14 +659,6 @@ func (nav *Navigator) UnsafeClickButton(selector string) error {
 	}
 	nav.Logger.Printf("Button clicked successfully with selector: %s\n", selector)
 
-	time.Sleep(nav.Timeout)
-
-	// Ensure the context is not cancelled and the page is fully loaded
-	_, err = nav.WaitPageLoad()
-	if err != nil {
-		return err
-	}
-	chromedp.WaitReady("body")
 	return nil
 }
 

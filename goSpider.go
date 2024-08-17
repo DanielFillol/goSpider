@@ -14,6 +14,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1018,6 +1020,120 @@ func (nav *Navigator) MakeElementVisible(selector string) error {
 	}
 	nav.Logger.Printf("Element with selector: %s is now visible\n", selector)
 	return nil
+}
+
+// Datepicker deals with date-picker elements on websites by receiving a date, calculates the amount of time it needs to go back in the picker and finally selects a day.
+//
+//	date: string in the format "dd/mm/aaaa"
+//	calendarButtonSelector: the css selector of the data-picker
+//	calendarButtonGoBack: the css selector of the go back button
+//	calendarButtonsTableXpath: the xpath of the days table example: "//*[@id="ui-datepicker-div"]/table/tbody/tr";
+//	calendarButtonTR: the css selector of the days table row, example: "//*[@id="ui-datepicker-div"]/table/tbody/tr"
+func (nav *Navigator) Datepicker(date, calendarButtonSelector, calendarButtonGoBack, calendarButtonsTableXpath, calendarButtonTR string) error {
+	regex := `^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/[0-9]{4}$`
+	r := regexp.MustCompile(regex)
+	if r.MatchString(date) == false {
+		return errors.New("date does not match with dd/mm/aaaa")
+	}
+
+	parsedDate, err := time.Parse("02/01/2006", date)
+	if err != nil {
+		return errors.New("error parsing date: " + err.Error())
+	}
+
+	today := time.Now().Format("02/01/2006")
+	parseToday, err := time.Parse("02/01/2006", today)
+	if err != nil {
+		return errors.New("error parsing today's date: " + err.Error())
+	}
+
+	// Ensure startDate is before endDate
+	if parsedDate.After(parseToday) {
+		return errors.New("date must be older then today")
+	}
+	years, months, _ := calculateDateDifference(parsedDate, parseToday)
+
+	err = nav.ClickButton(calendarButtonSelector)
+	if err != nil {
+		return err
+	}
+
+	i := 0
+	for {
+		err = chromedp.Run(nav.Ctx, chromedp.Click(calendarButtonGoBack))
+		if err != nil {
+			break
+		}
+		i++
+		if i == ((years * 12) + months) {
+			break
+		}
+	}
+
+	err = nav.WaitForElement(calendarButtonsTableXpath, time.Minute)
+	if err != nil {
+		return err
+	}
+
+	pageSource, err := nav.GetPageSource()
+	if err != nil {
+		return err
+	}
+
+	tt, err := htmlquery.Find(pageSource, calendarButtonsTableXpath)
+	if err != nil {
+		return err
+	}
+
+	for k, node := range tt {
+		for l := 1; l < 8; l++ {
+			day, err := ExtractText(node, "td["+strconv.Itoa(l)+"]", "")
+			if err != nil {
+				return err
+			}
+			if day == strconv.Itoa(parsedDate.Day()) {
+				err = nav.ClickButton(calendarButtonsTableXpath + "[" + strconv.Itoa(k+1) + "]/td[" + strconv.Itoa(l) + "]")
+				if err != nil {
+					return errors.New("error clicking button on calendar button: " + calendarButtonTR + "(" + strconv.Itoa(k) + ") > td:nth-child(" + strconv.Itoa(l) + "). Error code: " + err.Error())
+				} else {
+					return nil
+				}
+			}
+
+		}
+
+	}
+	return errors.New("could not pick date")
+}
+func calculateDateDifference(startDate, endDate time.Time) (int, int, int) {
+	years := endDate.Year() - startDate.Year()
+	months := int(endDate.Month()) - int(startDate.Month())
+	days := endDate.Day() - startDate.Day()
+
+	// Adjust the difference if necessary
+	if days < 0 {
+		// Borrow days from the previous month
+		months--
+		previousMonth := endDate.AddDate(0, -1, 0)
+		days += previousMonth.Day()
+	}
+
+	if months < 0 {
+		// Borrow months from the previous year
+		years--
+		months += 12
+	}
+
+	return years, months, days
+}
+
+func PrintHtml(pageSource *html.Node) (string, error) {
+	var sb strings.Builder
+	err := html.Render(&sb, pageSource)
+	if err != nil {
+		return "", err
+	}
+	return sb.String(), nil
 }
 
 // Close closes the Navigator instance and releases resources.

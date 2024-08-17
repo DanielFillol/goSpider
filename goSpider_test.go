@@ -605,6 +605,67 @@ func TestMakeElementVisible(t *testing.T) {
 	}
 }
 
+func TestPrintHtml(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	defer nav.Close()
+
+	err := nav.OpenURL(server.URL + "/test.html")
+	if err != nil {
+		t.Errorf("OpenURL error: %v", err)
+	}
+
+	ps, err := nav.GetPageSource()
+	if err != nil {
+		t.Errorf("GetPageSource error: %v", err)
+	}
+
+	s, err := PrintHtml(ps)
+	if err != nil {
+		t.Errorf("PrintHtml error: %v", err)
+	}
+
+	fmt.Println(s)
+
+}
+
+func TestDatepicker(t *testing.T) {
+	nav := NewNavigator("", false)
+
+	err := nav.OpenURL("https://www.tjrs.jus.br/buscas/jurisprudencia/?conteudo_busca=ementa_completa&q_palavra_chave=&aba=jurisprudencia&q=&conteudo_busca=ementa_completa")
+	if err != nil {
+		t.Errorf("OpenURL error: %v", err)
+		return
+	}
+
+	err = nav.WaitForElement("#datas_julgamento_publicacao_div > div:nth-child(2) > div.col-md-4.col-xs-12.dataPublicacaoContainer > div > div > div.recuo_esquerdo_10px.col-md-5.col-xs-5 > div > input", time.Minute)
+	if err != nil {
+		t.Errorf("WaitForElement error: %v", err)
+		return
+	}
+
+	err = nav.Datepicker("01/01/2000", "#datas_julgamento_publicacao_div > div:nth-child(2) > div.col-md-4.col-xs-12.dataPublicacaoContainer > div > div > div.recuo_esquerdo_10px.col-md-5.col-xs-5 > div > span > i", "#ui-datepicker-div > div > a.ui-datepicker-prev.ui-corner-all > span", "//*[@id=\"ui-datepicker-div\"]/table/tbody/tr", "#ui-datepicker-div > table > tbody > tr:nth-child")
+	if err != nil {
+		t.Errorf("Datepicker error: %v", err)
+		return
+	}
+
+	err = nav.Datepicker("31/12/2000", "#datas_julgamento_publicacao_div > div:nth-child(2) > div.col-md-4.col-xs-12.dataPublicacaoContainer > div > div > div:nth-child(3) > div > span", "#ui-datepicker-div > div > a.ui-datepicker-prev.ui-corner-all > span", "//*[@id=\"ui-datepicker-div\"]/table/tbody/tr", "#ui-datepicker-div > table > tbody > tr:nth-child")
+	if err != nil {
+		t.Errorf("Datepicker error: %v", err)
+		return
+	}
+
+	start := time.Now()
+	for {
+		if time.Since(start) > time.Minute {
+			break
+		}
+	}
+}
+
 // Won't pass on test because 2FA requires input on the terminal by the user, for that reason alone the test will fail
 //// TestLoginGoogle tests google single logon
 //func TestLoginGoogle(t *testing.T) {

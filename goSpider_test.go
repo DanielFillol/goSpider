@@ -622,9 +622,9 @@ func TestPrintHtml(t *testing.T) {
 		t.Errorf("GetPageSource error: %v", err)
 	}
 
-	s, err := PrintHtml(ps)
+	s, err := ParseHtmlToString(ps)
 	if err != nil {
-		t.Errorf("PrintHtml error: %v", err)
+		t.Errorf("ParseHtmlToString error: %v", err)
 	}
 
 	fmt.Println(s)

@@ -1127,7 +1127,8 @@ func calculateDateDifference(startDate, endDate time.Time) (int, int, int) {
 	return years, months, days
 }
 
-func PrintHtml(pageSource *html.Node) (string, error) {
+// ParseHtmlToString used for parsing html.node into string for debugging purposes
+func ParseHtmlToString(pageSource *html.Node) (string, error) {
 	var sb strings.Builder
 	err := html.Render(&sb, pageSource)
 	if err != nil {

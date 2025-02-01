@@ -27,6 +27,7 @@ func startTestServer() *httptest.Server {
 func setupNavigator(t *testing.T) *Navigator {
 	nav := NewNavigator("", true)
 	nav.SetTimeOut(600 * time.Millisecond)
+	nav.DebugLogger = false
 	t.Cleanup(nav.Close)
 	return nav
 }

@@ -23,11 +23,12 @@ import (
 
 // Navigator is a struct that holds the context for the ChromeDP session and a logger.
 type Navigator struct {
-	Ctx     context.Context
-	Cancel  context.CancelFunc
-	Logger  *log.Logger
-	Timeout time.Duration
-	Cookies []*network.Cookie
+	Ctx         context.Context
+	Cancel      context.CancelFunc
+	Logger      *log.Logger
+	DebugLogger bool
+	Timeout     time.Duration
+	Cookies     []*network.Cookie
 }
 
 // NewNavigator creates a new Navigator instance.
@@ -82,7 +83,9 @@ func NewNavigator(profilePath string, headless bool) *Navigator {
 
 	// Set standard timeout with enhanced logging
 	navigator.SetTimeOut(300 * time.Millisecond)
-	logger.Printf("Navigator initialized with timeout: %v\n", navigator.Timeout)
+	if navigator.DebugLogger {
+		logger.Printf("Navigator initialized with timeout: %v\n", navigator.Timeout)
+	}
 
 	return navigator
 }
@@ -118,7 +121,9 @@ func (nav *Navigator) GetElementAttribute(selector, attribute string) (string, e
 
 // SwitchToFrame switches the context to the specified iframe.
 func (nav *Navigator) SwitchToFrame(selector string) error {
-	nav.Logger.Println("Switching to frame", selector)
+	if nav.DebugLogger {
+		nav.Logger.Println("Switching to frame", selector)
+	}
 
 	// Wait for the iframe to be visible
 	err := nav.WaitForElement(selector, nav.Timeout)
@@ -143,13 +148,17 @@ func (nav *Navigator) SwitchToFrame(selector string) error {
 		return fmt.Errorf("failed to switch to iframe: %v", err)
 	}
 
-	nav.Logger.Println("SwitchToFrame", selector, "successfully")
+	if nav.DebugLogger {
+		nav.Logger.Println("SwitchToFrame", selector, "successfully")
+	}
 	return nil
 }
 
 // SwitchToDefaultContent switches the context back to the main content from an iframe context.
 func (nav *Navigator) SwitchToDefaultContent() error {
-	nav.Logger.Println("Switching to default content")
+	if nav.DebugLogger {
+		nav.Logger.Println("Switching to default content")
+	}
 
 	// Switch back to the main content
 	err := chromedp.Run(nav.Ctx,
@@ -168,7 +177,9 @@ func (nav *Navigator) SwitchToDefaultContent() error {
 		return fmt.Errorf("failed to switch to default content: %v", err)
 	}
 
-	nav.Logger.Println("Switch to default content successfully")
+	if nav.DebugLogger {
+		nav.Logger.Println("Switch to default content successfully")
+	}
 	return nil
 }
 
@@ -177,13 +188,14 @@ func (nav *Navigator) SwitchToDefaultContent() error {
 //
 //	err := nav.OpenURL("https://www.example.com")
 func (nav *Navigator) OpenURL(url string) error {
-	nav.Logger.Printf("Opening URL: %s\n", url)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Opening URL: %s\n", url)
+	}
 	err := chromedp.Run(nav.Ctx,
 		chromedp.Navigate(url),
 		chromedp.WaitReady("body"), // Ensures the page is fully loaded
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to open URL: %v\n", err)
 		return fmt.Errorf("error - failed to open URL: %v", err)
 	}
 
@@ -191,8 +203,9 @@ func (nav *Navigator) OpenURL(url string) error {
 	if err != nil {
 		return err
 	}
-
-	nav.Logger.Printf("URL opened successfully with URL: %s\n", url)
+	if nav.DebugLogger {
+		nav.Logger.Printf("URL opened successfully with URL: %s\n", url)
+	}
 	return nil
 }
 
@@ -201,16 +214,19 @@ func (nav *Navigator) OpenURL(url string) error {
 //
 //	currentURL, err := nav.GetCurrentURL()
 func (nav *Navigator) GetCurrentURL() (string, error) {
-	nav.Logger.Println("Extracting the current URL")
+	if nav.DebugLogger {
+		nav.Logger.Println("Extracting the current URL")
+	}
 	var currentURL string
 	err := chromedp.Run(nav.Ctx,
 		chromedp.Location(&currentURL),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to extract current URL: %v\n", err)
 		return "", fmt.Errorf("error - failed to extract current URL: %v", err)
 	}
-	nav.Logger.Println("Current URL extracted successfully")
+	if nav.DebugLogger {
+		nav.Logger.Println("Current URL extracted successfully")
+	}
 	return currentURL, nil
 }
 
@@ -219,31 +235,29 @@ func (nav *Navigator) GetCurrentURL() (string, error) {
 //
 //	err := nav.Login("https://www.example.com/login", "username", "password", "#username", "#password", "#login-button", "#login-message-fail")
 func (nav *Navigator) Login(url, username, password, usernameSelector, passwordSelector, loginButtonSelector string, messageFailedSuccess string) error {
-	nav.Logger.Printf("Logging into URL: %s\n", url)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Logging into URL: %s\n", url)
+	}
 
 	if url != "" {
 		err := nav.OpenURL(url)
 		if err != nil {
-			nav.Logger.Printf("Error - Failed to open URL: %v\n", err)
 			return fmt.Errorf("error - failed to open URL: %v", err)
 		}
 	}
 
 	err := nav.WaitForElement(usernameSelector, nav.Timeout)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed waiting for element: %v\n", err)
 		return fmt.Errorf("error - failed waiting for element: %v", err)
 	}
 
 	err = nav.WaitForElement(passwordSelector, nav.Timeout)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed waiting for element: %v\n", err)
 		return fmt.Errorf("error - failed waiting for element: %v", err)
 	}
 
 	err = nav.WaitForElement(loginButtonSelector, nav.Timeout)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed waiting for element: %v\n", err)
 		return fmt.Errorf("error - failed waiting for element: %v", err)
 	}
 
@@ -257,107 +271,111 @@ func (nav *Navigator) Login(url, username, password, usernameSelector, passwordS
 		if messageFailedSuccess != "" {
 			err = nav.WaitForElement(messageFailedSuccess, nav.Timeout)
 			if err != nil {
-				nav.Logger.Printf("Error - Failed waiting for element: %v\n", err)
 				return fmt.Errorf("error - failed waiting for element: %v", err)
 			}
 			message, err := nav.GetElement(messageFailedSuccess)
 			if err == nil {
-				nav.Logger.Printf("Error - Failed to log in: %v\n", err)
-				nav.Logger.Printf("Message found: %s", message)
+				if nav.DebugLogger {
+					nav.Logger.Printf("Message found: %s", message)
+				}
 				return fmt.Errorf("error - message: %v", message)
 			} else {
-				nav.Logger.Printf("Message was not found")
 				return fmt.Errorf("error - failed to log in: %v", err)
 			}
 		}
-		nav.Logger.Printf("Error - Failed to log in: %v\n", err)
+		if nav.DebugLogger {
+			nav.Logger.Printf("Error - Failed to log in: %v\n", err)
+		}
 		return fmt.Errorf("error - failed to log in: %v", err)
 	}
 
-	//sometimes the page does accept the login information but still returns a error message
+	//sometimes the page does accept the login information but still returns an error message
 	if messageFailedSuccess != "" {
 		err = nav.WaitForElement(messageFailedSuccess, nav.Timeout)
 		if err == nil {
 			message, err := nav.GetElement(messageFailedSuccess)
 			if err == nil {
-				nav.Logger.Printf("Message found: %s", message)
+				if nav.DebugLogger {
+					nav.Logger.Printf("Message found: %s", message)
+				}
 				return fmt.Errorf("error - message: %v", message)
 			} else {
-				nav.Logger.Printf("Message was not found")
 				return fmt.Errorf("error - failed to log in: %v", err)
 			}
 		}
 	}
 
-	nav.Logger.Println("Logged in successfully")
+	if nav.DebugLogger {
+		nav.Logger.Println("Logged in successfully")
+	}
 	return nil
 }
 
 // LoginAccountsGoogle performs the Google login on the given URL
 func (nav *Navigator) LoginAccountsGoogle(email, password string) error {
-	nav.Logger.Printf("Opening URL: %s\n", "accounts.google.com")
+	if nav.DebugLogger {
+		nav.Logger.Printf("Opening URL: %s\n", "accounts.google.com")
+	}
 	err := chromedp.Run(nav.Ctx, chromedp.Navigate("https://accounts.google.com"))
 	if err != nil {
-		nav.Logger.Printf("Failed to open URL: %v\n", err)
 		return fmt.Errorf("failed to open URL: %v", err)
 	}
 
 	_, err = nav.WaitPageLoad()
 	if err != nil {
-		nav.Logger.Printf("Failed to WaitPageLoad: %v\n", err)
 		return fmt.Errorf("failed to WaitPageLoad: %v", err)
 	}
 	time.Sleep(300 * time.Millisecond)
 
 	// Fill the Google login form
-	nav.Logger.Println("Filling in the Google login form")
+	if nav.DebugLogger {
+		nav.Logger.Println("Filling in the Google login form")
+	}
 	err = nav.FillField(`#identifierId`, email)
 	if err != nil {
 		err = nav.WaitForElement("#yDmH0d > c-wiz > div > div:nth-child(2) > div > c-wiz > c-wiz > div > div.s7iwrf.gMPiLc.Kdcijb > div > div > header > h1", nav.Timeout)
 		if err != nil {
-			nav.Logger.Printf("Error - Failed to log in: %v\n", err)
 			return fmt.Errorf("error - failed to check login: %v", err)
 		} else {
 			s, err := nav.GetElement("#yDmH0d > c-wiz > div > div:nth-child(2) > div > c-wiz > c-wiz > div > div.s7iwrf.gMPiLc.Kdcijb > div > div > header > h1")
 			if err != nil {
-				nav.Logger.Printf("Error - Failed to log in: %v\n", err)
 				return fmt.Errorf("error - failed to check login: %v", err)
 			}
-			nav.Logger.Printf("Already logged in! \n%s", s)
+			if nav.DebugLogger {
+				nav.Logger.Printf("Already logged in! \n%s", s)
+			}
 			return nil
 		}
 	}
 
 	err = nav.ClickButton(`#identifierNext`)
 	if err != nil {
-		nav.Logger.Printf("Failed to click the 'Next' button: %v\n", err)
+		if nav.DebugLogger {
+			nav.Logger.Printf("Failed to click the 'Next' button: %v\n", err)
+		}
 		return fmt.Errorf("failed to click the 'Next' button: %v", err)
 	}
 
 	// Adding a small delay to allow the next page to load
 	_, err = nav.WaitPageLoad()
 	if err != nil {
-		nav.Logger.Printf("Failed to WaitPageLoad: %v\n", err)
 		return fmt.Errorf("failed to WaitPageLoad: %v", err)
 	}
 	time.Sleep(2 * time.Second)
 
 	err = nav.FillField("#password > div.aCsJod.oJeWuf > div > div.Xb9hP > input", password)
 	if err != nil {
-		nav.Logger.Printf("Failed to fill the password field: %v\n", err)
 		return fmt.Errorf("failed to fill the password field: %v", err)
 	}
 
 	err = nav.ClickButton(`#passwordNext`)
 	if err != nil {
-		nav.Logger.Printf("Failed to click the 'Next' button for password: %v\n", err)
 		return fmt.Errorf("failed to click the 'Next' button for password: %v", err)
 	}
 
 	// Adding a small delay to allow the next page to load
 	_, err = nav.WaitPageLoad()
 	if err != nil {
-		nav.Logger.Printf("Failed to WaitPageLoad: %v\n", err)
 		return fmt.Errorf("failed to WaitPageLoad: %v", err)
 	}
 	time.Sleep(2 * time.Second)
@@ -367,36 +385,44 @@ func (nav *Navigator) LoginAccountsGoogle(email, password string) error {
 	//"#yDmH0d > c-wiz > div > div.UXFQgc > div > div > div > form > span > section:nth-child(2) > div > div > div.AFTWye.GncK > div > div.aCsJod.oJeWuf > div > div.Xb9hP"
 	err = nav.FillField("#idvPin", authCode)
 	if err != nil {
-		nav.Logger.Printf("Failed to fill the idvPin with code: %s\n field: %v\n", authCode, err)
 		return fmt.Errorf("failed to fill the idvPin with code: %s\n field: %v\n", authCode, err)
 	}
 
-	nav.Logger.Println("Google login completed successfully")
+	if nav.DebugLogger {
+		nav.Logger.Println("Google login completed successfully")
+	}
 	return nil
 }
 
 // LoginWithGoogle performs the Google login on the given URL
 func (nav *Navigator) LoginWithGoogle(url string) error {
-	nav.Logger.Printf("Opening URL: %s\n", url)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Opening URL: %s\n", url)
+	}
 	err := chromedp.Run(nav.Ctx,
 		chromedp.Navigate(url),
 	)
 	if err != nil {
-		nav.Logger.Printf("Failed to open URL: %v\n", err)
 		return fmt.Errorf("failed to open URL: %v", err)
 	}
 
-	nav.Logger.Println("Clicking the 'Continuar com o Google' button")
+	if nav.DebugLogger {
+		nav.Logger.Println("Clicking the 'Continuar com o Google' button")
+	}
 	err = nav.ClickButton(".SocialButton")
 	if err != nil {
-		nav.Logger.Printf("Alredy logged in: %v\n", err)
+		if nav.DebugLogger {
+			nav.Logger.Printf("Alredy logged in: %v\n", err)
+		}
 		return nil
-		//nav.Logger.Printf("Failed to click the Google login button: %v\n", err)
+		//if nav.DebugLogger {nav.Logger.Printf("Failed to click the Google login button: %v\n", err)}
 		//return fmt.Errorf("failed to click the Google login button: %v", err)
 	}
 
 	// Wait for the popup to appear and switch to it
-	nav.Logger.Println("Switching to the Google login popup")
+	if nav.DebugLogger {
+		nav.Logger.Println("Switching to the Google login popup")
+	}
 	var popupCtx context.Context
 	var popupCancel context.CancelFunc
 	for {
@@ -412,7 +438,6 @@ func (nav *Navigator) LoginWithGoogle(url string) error {
 				}
 			}
 		case <-time.After(10 * time.Second):
-			nav.Logger.Println("Failed to detect the Google login popup")
 			return fmt.Errorf("failed to detect the Google login popup")
 		}
 		if popupCtx != nil {
@@ -434,14 +459,15 @@ func (nav *Navigator) LoginWithGoogle(url string) error {
 	// Log the current URL of the popup
 	currentURL, err := newNav.GetCurrentURL()
 	if err != nil {
-		nav.Logger.Printf("Failed to get the current URL of the popup: %v\n", err)
-		return err
+		return fmt.Errorf("failed to get the current URL of the popup: %v\n", err)
 	}
 	fmt.Printf("Popup URL: %s\n", currentURL)
 
 	// Check if the popup navigated to the Google login page
 	if !strings.Contains(currentURL, "accounts.google.com") {
-		nav.Logger.Printf("Popup did not navigate to Google login page, current URL: %s\n", currentURL)
+		if nav.DebugLogger {
+			nav.Logger.Printf("Popup did not navigate to Google login page, current URL: %s\n", currentURL)
+		}
 		return fmt.Errorf("popup did not navigate to Google login page")
 	}
 
@@ -452,23 +478,22 @@ func (nav *Navigator) LoginWithGoogle(url string) error {
 	// Fill the Google login form
 	err = newNav.ClickElement("#container")
 	if err != nil {
-		nav.Logger.Printf("Failed to click element: %v\n", err)
 		return fmt.Errorf("failed to click element: %v", err)
 	}
 
 	_, err = newNav.WaitPageLoad()
 	if err != nil {
-		nav.Logger.Printf("Failed to WaitPageLoad: %v\n", err)
 		return fmt.Errorf("failed to WaitPageLoad: %v", err)
 	}
 
 	err = newNav.ClickButton("#credentials-picker > div.fFW7wc-ibnC6b-sM5MNb.TAKBxb")
 	if err != nil {
-		nav.Logger.Printf("Failed to click button: %v\n", err)
 		return fmt.Errorf("failed to click button: %v", err)
 	}
 
-	newNav.Logger.Println("Google login completed successfully")
+	if nav.DebugLogger {
+		newNav.Logger.Println("Google login completed successfully")
+	}
 	return nil
 }
 
@@ -490,20 +515,22 @@ func AskForString(prompt string) string {
 //	err := nav.CaptureScreenshot("img")
 func (nav *Navigator) CaptureScreenshot(nameFile string) error {
 	var buf []byte
-	nav.Logger.Println("Capturing screenshot")
+	if nav.DebugLogger {
+		nav.Logger.Println("Capturing screenshot")
+	}
 	err := chromedp.Run(nav.Ctx,
 		chromedp.CaptureScreenshot(&buf),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to capture screenshot: %v\n", err)
 		return fmt.Errorf("error - failed to capture screenshot: %v", err)
 	}
 	err = ioutil.WriteFile(nameFile+"_screenshot.png", buf, 0644)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to save screenshot: %v\n", err)
 		return fmt.Errorf("error - failed to save screenshot: %v", err)
 	}
-	nav.Logger.Printf("Screenshot saved successfully with name: %s\n", nameFile)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Screenshot saved successfully with name: %s\n", nameFile)
+	}
 	return nil
 }
 
@@ -513,18 +540,26 @@ func (nav *Navigator) CaptureScreenshot(nameFile string) error {
 func (nav *Navigator) ReloadPage(retryCount int) error {
 	var err error
 	for i := 0; i < retryCount; i++ {
-		nav.Logger.Printf("Attempt %d: Reloading the page\n", i+1)
+		if nav.DebugLogger {
+			nav.Logger.Printf("Attempt %d: Reloading the page\n", i+1)
+		}
 		err = chromedp.Run(nav.Ctx,
 			chromedp.Reload(),
 		)
 		if err == nil {
-			nav.Logger.Println("Page reloaded successfully")
+			if nav.DebugLogger {
+				nav.Logger.Println("Page reloaded successfully")
+			}
 			return nil
 		}
-		nav.Logger.Printf("Info: Failed to reload page: %v. Retrying...\n", err)
+		if nav.DebugLogger {
+			nav.Logger.Printf("Info: Failed to reload page: %v. Retrying...\n", err)
+		}
 		time.Sleep(2 * time.Second)
 	}
-	nav.Logger.Printf("Error - Failed to reload page after %d attempts: %v\n", retryCount, err)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Error - Failed to reload page after %d attempts: %v\n", retryCount, err)
+	}
 	return fmt.Errorf("error - failed to reload page after %d attempts: %v", retryCount, err)
 }
 
@@ -536,7 +571,6 @@ func (nav *Navigator) WaitPageLoad() (string, error) {
 	var pageHTML string
 	for {
 		if time.Since(start) > time.Minute {
-			nav.Logger.Println("Error - Timeout waiting for page to fully load")
 			return "", fmt.Errorf("error - timeout waiting for page to fully load")
 		}
 
@@ -544,18 +578,21 @@ func (nav *Navigator) WaitPageLoad() (string, error) {
 			chromedp.Evaluate(`document.readyState`, &pageHTML),
 		)
 		if err != nil {
-			nav.Logger.Printf("Error - Failed to check page readiness: %v\n", err)
 			return "", fmt.Errorf("error - failed to check page readiness: %v", err)
 		}
 
 		if pageHTML == "complete" {
 			break
 		}
-		nav.Logger.Println("INFO: Page is not fully loaded yet, retrying...")
+		if nav.DebugLogger {
+			nav.Logger.Println("INFO: Page is not fully loaded yet, retrying...")
+		}
 		time.Sleep(nav.Timeout)
 	}
 
-	nav.Logger.Println("INFO: Page is fully loaded")
+	if nav.DebugLogger {
+		nav.Logger.Println("INFO: Page is fully loaded")
+	}
 	return pageHTML, nil
 }
 
@@ -565,7 +602,9 @@ func (nav *Navigator) WaitPageLoad() (string, error) {
 //
 //	pageSource, err := nav.GetPageSource()
 func (nav *Navigator) GetPageSource() (*html.Node, error) {
-	nav.Logger.Println("Getting the HTML content of the page")
+	if nav.DebugLogger {
+		nav.Logger.Println("Getting the HTML content of the page")
+	}
 	var pageHTML string
 
 	// Ensure the context is not cancelled and the page is fully loaded
@@ -579,17 +618,17 @@ func (nav *Navigator) GetPageSource() (*html.Node, error) {
 		chromedp.OuterHTML("html", &pageHTML),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to get page HTML: %v\n", err)
 		return nil, fmt.Errorf("error - failed to get page HTML: %v", err)
 	}
 
 	htmlPgSrc, err := htmlquery.Parse(strings.NewReader(pageHTML))
 	if err != nil {
-		nav.Logger.Printf("Error - failed to convert page HTML: %v", err)
 		return nil, fmt.Errorf("error - failed to convert page HTML: %v", err)
 	}
 
-	nav.Logger.Println("Page HTML retrieved successfully")
+	if nav.DebugLogger {
+		nav.Logger.Println("Page HTML retrieved successfully")
+	}
 	return htmlPgSrc, nil
 }
 
@@ -598,17 +637,20 @@ func (nav *Navigator) GetPageSource() (*html.Node, error) {
 //
 //	err := nav.WaitForElement("#elementID", 5*time.Second)
 func (nav *Navigator) WaitForElement(selector string, timeout time.Duration) error {
-	nav.Logger.Printf("Waiting for element with selector: %s to be visible\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Waiting for element with selector: %s to be visible\n", selector)
+	}
 	ctx, cancel := context.WithTimeout(nav.Ctx, timeout)
 	defer cancel()
 	err := chromedp.Run(ctx,
 		chromedp.WaitVisible(selector),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to wait for element: %v\n", err)
 		return fmt.Errorf("error - failed to wait for element: %v", err)
 	}
-	nav.Logger.Printf("Element is now visible with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Element is now visible with selector: %s\n", selector)
+	}
 	return nil
 }
 
@@ -617,11 +659,12 @@ func (nav *Navigator) WaitForElement(selector string, timeout time.Duration) err
 //
 //	err := nav.ClickButton("#buttonID")
 func (nav *Navigator) ClickButton(selector string) error {
-	nav.Logger.Printf("Clicking button with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Clicking button with selector: %s\n", selector)
+	}
 
 	err := nav.WaitForElement(selector, nav.Timeout)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed waiting for element: %v\n", err)
 		return fmt.Errorf("error - failed waiting for element: %v", err)
 	}
 
@@ -629,10 +672,11 @@ func (nav *Navigator) ClickButton(selector string) error {
 		chromedp.Click(selector),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to click button: %v\n", err)
 		return fmt.Errorf("error - failed to click button: %v", err)
 	}
-	nav.Logger.Printf("Button clicked successfully with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Button clicked successfully with selector: %s\n", selector)
+	}
 
 	time.Sleep(nav.Timeout)
 
@@ -650,17 +694,19 @@ func (nav *Navigator) ClickButton(selector string) error {
 //
 //	err := nav.ClickButton("#buttonID")
 func (nav *Navigator) UnsafeClickButton(selector string) error {
-	nav.Logger.Printf("Clicking button with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Clicking button with selector: %s\n", selector)
+	}
 
 	err := chromedp.Run(nav.Ctx,
 		chromedp.Click(selector, chromedp.ByID),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to click button: %v\n", err)
 		return fmt.Errorf("error - failed to click button: %v", err)
 	}
-	nav.Logger.Printf("Button clicked successfully with selector: %s\n", selector)
-
+	if nav.DebugLogger {
+		nav.Logger.Printf("Button clicked successfully with selector: %s\n", selector)
+	}
 	return nil
 }
 
@@ -669,11 +715,12 @@ func (nav *Navigator) UnsafeClickButton(selector string) error {
 //
 //	err := nav.ClickElement("#elementID")
 func (nav *Navigator) ClickElement(selector string) error {
-	nav.Logger.Printf("Clicking element with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Clicking element with selector: %s\n", selector)
+	}
 
 	err := nav.WaitForElement(selector, nav.Timeout)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed waiting for element: %v\n", err)
 		return fmt.Errorf("error - failed waiting for element: %v", err)
 	}
 
@@ -681,11 +728,12 @@ func (nav *Navigator) ClickElement(selector string) error {
 		chromedp.Click(selector, chromedp.ByID),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed chromedp.ByID clicking element: %v\n", err)
 		return fmt.Errorf("error - Failed chromedp.ByID chromedp error: %v", err)
 	}
 
-	nav.Logger.Printf("Element clicked with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Element clicked with selector: %s\n", selector)
+	}
 	return nil
 }
 
@@ -694,11 +742,12 @@ func (nav *Navigator) ClickElement(selector string) error {
 //
 //	err := nav.CheckRadioButton("#radioButtonID")
 func (nav *Navigator) CheckRadioButton(selector string) error {
-	nav.Logger.Printf("Selecting radio button with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Selecting radio button with selector: %s\n", selector)
+	}
 
 	err := nav.WaitForElement(selector, nav.Timeout)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed waiting for element: %v\n", err)
 		return fmt.Errorf("error - failed waiting for element: %v", err)
 	}
 
@@ -706,10 +755,11 @@ func (nav *Navigator) CheckRadioButton(selector string) error {
 		chromedp.Click(selector, chromedp.NodeVisible),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to select radio button: %v\n", err)
 		return fmt.Errorf("error - failed to select radio button: %v", err)
 	}
-	nav.Logger.Printf("Radio button selected successfully with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Radio button selected successfully with selector: %s\n", selector)
+	}
 	return nil
 }
 
@@ -718,11 +768,12 @@ func (nav *Navigator) CheckRadioButton(selector string) error {
 //
 //	err := nav.UncheckRadioButton("#checkboxID")
 func (nav *Navigator) UncheckRadioButton(selector string) error {
-	nav.Logger.Printf("Unchecking checkbox with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Unchecking checkbox with selector: %s\n", selector)
+	}
 
 	err := nav.WaitForElement(selector, nav.Timeout)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed waiting for element: %v\n", err)
 		return fmt.Errorf("error - failed waiting for element: %v", err)
 	}
 
@@ -730,10 +781,11 @@ func (nav *Navigator) UncheckRadioButton(selector string) error {
 		chromedp.RemoveAttribute(selector, "checked", chromedp.NodeVisible),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to uncheck radio button: %v\n", err)
 		return fmt.Errorf("error - failed to uncheck radio button: %v", err)
 	}
-	nav.Logger.Printf("Checkbox unchecked successfully with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Checkbox unchecked successfully with selector: %s\n", selector)
+	}
 	return nil
 }
 
@@ -742,11 +794,12 @@ func (nav *Navigator) UncheckRadioButton(selector string) error {
 //
 //	err := nav.FillField("#fieldID", "value")
 func (nav *Navigator) FillField(selector string, value string) error {
-	nav.Logger.Printf("Filling field with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Filling field with selector: %s\n", selector)
+	}
 
 	err := nav.WaitForElement(selector, nav.Timeout)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed waiting for element: %v\n", err)
 		return fmt.Errorf("error - failed waiting for element: %v", err)
 	}
 
@@ -754,10 +807,11 @@ func (nav *Navigator) FillField(selector string, value string) error {
 		chromedp.SendKeys(selector, value, chromedp.ByQuery),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to fill field with selector: %v\n", err)
 		return fmt.Errorf("error - failed to fill field with selector: %v", err)
 	}
-	nav.Logger.Printf("Field filled with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Field filled with selector: %s\n", selector)
+	}
 	return nil
 }
 
@@ -766,16 +820,19 @@ func (nav *Navigator) FillField(selector string, value string) error {
 //
 //	err := nav.FillField("#fieldID", "value")
 func (nav *Navigator) UnsafeFillField(selector string, value string) error {
-	nav.Logger.Printf("Filling field with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Filling field with selector: %s\n", selector)
+	}
 
 	err := chromedp.Run(nav.Ctx,
 		chromedp.SendKeys(selector, value, chromedp.ByQuery),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to fill field with selector: %v\n", err)
 		return fmt.Errorf("error - failed to fill field with selector: %v", err)
 	}
-	nav.Logger.Printf("Field filled with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Field filled with selector: %s\n", selector)
+	}
 	return nil
 }
 
@@ -784,16 +841,19 @@ func (nav *Navigator) UnsafeFillField(selector string, value string) error {
 //
 //	links, err := nav.ExtractLinks()
 func (nav *Navigator) ExtractLinks() ([]string, error) {
-	nav.Logger.Println("Extracting links from the current page")
+	if nav.DebugLogger {
+		nav.Logger.Println("Extracting links from the current page")
+	}
 	var links []string
 	err := chromedp.Run(nav.Ctx,
 		chromedp.Evaluate(`Array.from(document.querySelectorAll('a')).map(a => a.href)`, &links),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to extract links: %v\n", err)
 		return nil, fmt.Errorf("error - failed to extract links: %v", err)
 	}
-	nav.Logger.Println("Links extracted successfully")
+	if nav.DebugLogger {
+		nav.Logger.Println("Links extracted successfully")
+	}
 	return links, nil
 }
 
@@ -806,11 +866,12 @@ func (nav *Navigator) ExtractLinks() ([]string, error) {
 //	}
 //	err := nav.FillForm("#loginForm", formData)
 func (nav *Navigator) FillForm(selector string, data map[string]string) error {
-	nav.Logger.Printf("Filling form with selector: %s and data: %v\n", selector, data)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Filling form with selector: %s and data: %v\n", selector, data)
+	}
 
 	err := nav.WaitForElement(selector, nav.Timeout)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed waiting for element: %v\n", err)
 		return fmt.Errorf("error - failed waiting for element: %v", err)
 	}
 
@@ -824,10 +885,11 @@ func (nav *Navigator) FillForm(selector string, data map[string]string) error {
 
 	err = chromedp.Run(nav.Ctx, tasks...)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to fill form: %v\n", err)
 		return fmt.Errorf("error - failed to fill form: %v", err)
 	}
-	nav.Logger.Printf("Form filled and submitted successfully with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Form filled and submitted successfully with selector: %s\n", selector)
+	}
 	return nil
 }
 
@@ -836,7 +898,9 @@ func (nav *Navigator) FillForm(selector string, data map[string]string) error {
 //
 //	err := nav.HandleAlert()
 func (nav *Navigator) HandleAlert() error {
-	nav.Logger.Println("Handling JavaScript alert by accepting it")
+	if nav.DebugLogger {
+		nav.Logger.Println("Handling JavaScript alert by accepting it")
+	}
 
 	listenCtx, cancel := context.WithCancel(nav.Ctx)
 	defer cancel()
@@ -844,12 +908,16 @@ func (nav *Navigator) HandleAlert() error {
 	chromedp.ListenTarget(listenCtx, func(ev interface{}) {
 		switch ev := ev.(type) {
 		case *page.EventJavascriptDialogOpening:
-			nav.Logger.Printf("Alert detected: %s", ev.Message)
+			if nav.DebugLogger {
+				nav.Logger.Printf("Alert detected: %s", ev.Message)
+			}
 			err := chromedp.Run(nav.Ctx,
 				page.HandleJavaScriptDialog(true),
 			)
 			if err != nil {
-				nav.Logger.Printf("Error - Failed to handle alert: %v\n", err)
+				if nav.DebugLogger {
+					nav.Logger.Printf("Error - Failed to handle alert: %v\n", err)
+				}
 			}
 		}
 	})
@@ -857,11 +925,12 @@ func (nav *Navigator) HandleAlert() error {
 	// Run a no-op to wait for the dialog to be handled
 	err := chromedp.Run(nav.Ctx, chromedp.Sleep(nav.Timeout))
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to handle alert: %v\n", err)
 		return fmt.Errorf("error - failed to handle alert: %v", err)
 	}
 
-	nav.Logger.Println("JavaScript alert accepted successfully")
+	if nav.DebugLogger {
+		nav.Logger.Println("JavaScript alert accepted successfully")
+	}
 	return nil
 }
 
@@ -870,11 +939,12 @@ func (nav *Navigator) HandleAlert() error {
 //
 //	err := nav.SelectDropdown("#dropdownID", "optionValue")
 func (nav *Navigator) SelectDropdown(selector, value string) error {
-	nav.Logger.Printf("Selecting dropdown option with selector: %s and value: %s\n", selector, value)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Selecting dropdown option with selector: %s and value: %s\n", selector, value)
+	}
 
 	err := nav.WaitForElement(selector, nav.Timeout)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed waiting for element: %v\n", err)
 		return fmt.Errorf("error - failed waiting for element: %v", err)
 	}
 
@@ -882,10 +952,11 @@ func (nav *Navigator) SelectDropdown(selector, value string) error {
 		chromedp.SetValue(selector, value, chromedp.NodeVisible),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to select dropdown option: %v\n", err)
 		return fmt.Errorf("error - failed to select dropdown option: %v", err)
 	}
-	nav.Logger.Println("Dropdown option selected successfully")
+	if nav.DebugLogger {
+		nav.Logger.Println("Dropdown option selected successfully")
+	}
 	return nil
 }
 
@@ -893,15 +964,18 @@ func (nav *Navigator) SelectDropdown(selector, value string) error {
 // script: the JavaScript code to execute
 // Returns an error if any
 func (nav *Navigator) ExecuteScript(script string) error {
-	nav.Logger.Println("Executing script on the page")
+	if nav.DebugLogger {
+		nav.Logger.Println("Executing script on the page")
+	}
 	err := chromedp.Run(nav.Ctx,
 		chromedp.Evaluate(script, nil),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to execute script: %v\n", err)
 		return fmt.Errorf("error - failed to execute script: %v", err)
 	}
-	nav.Logger.Println("Script executed successfully")
+	if nav.DebugLogger {
+		nav.Logger.Println("Script executed successfully")
+	}
 	return nil
 }
 
@@ -912,7 +986,6 @@ func (nav *Navigator) EvaluateScript(script string) (interface{}, error) {
 		chromedp.Evaluate(script, &result),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to evaluate script: %v\n", err)
 		return nil, fmt.Errorf("error - failed to evaluate script: %v", err)
 	}
 	return result, nil
@@ -923,12 +996,13 @@ func (nav *Navigator) EvaluateScript(script string) (interface{}, error) {
 //
 //	text, err := nav.GetElement("#elementID")
 func (nav *Navigator) GetElement(selector string) (string, error) {
-	nav.Logger.Printf("Getting element with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Getting element with selector: %s\n", selector)
+	}
 	var content string
 
 	err := nav.WaitForElement(selector, nav.Timeout)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed waiting for element: %v\n", err)
 		return "", fmt.Errorf("error - failed waiting for element: %v", err)
 	}
 
@@ -936,15 +1010,18 @@ func (nav *Navigator) GetElement(selector string) (string, error) {
 		chromedp.Text(selector, &content, chromedp.ByQuery, chromedp.NodeVisible),
 	)
 	if err != nil && err.Error() != "could not find node" {
-		nav.Logger.Printf("Error - Failed to get element: %v\n", err)
 		return "", fmt.Errorf("error - failed to get element: %v", err)
 	}
 	if content == "" {
-		nav.Logger.Printf("Element is empty with selector: %s\n", selector)
+		if nav.DebugLogger {
+			nav.Logger.Printf("Element is empty with selector: %s\n", selector)
+		}
 		return "", nil // Element not found or empty
 	}
 
-	nav.Logger.Printf("Got element with selector: %s\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Got element with selector: %s\n", selector)
+	}
 	return content, nil
 }
 
@@ -966,7 +1043,6 @@ func (nav *Navigator) SaveImageBase64(selector, outputPath, prefixClean string) 
 		chromedp.AttributeValue(selector, "src", &imageData, nil),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to get image data: %v\n", err)
 		return "", fmt.Errorf("error - failed to get image data: %w", err)
 	}
 
@@ -974,7 +1050,9 @@ func (nav *Navigator) SaveImageBase64(selector, outputPath, prefixClean string) 
 	if prefixClean != "" {
 		// Check if the image data is in base64 format
 		if !strings.HasPrefix(imageData, prefixClean) {
-			nav.Logger.Printf("Error - Unexpected image format: %v\n", err)
+			if nav.DebugLogger {
+				nav.Logger.Printf("Error - Unexpected image format: %v\n", err)
+			}
 			return "", fmt.Errorf("error - unexpected image format")
 		}
 
@@ -1004,21 +1082,26 @@ func (nav *Navigator) SaveImageBase64(selector, outputPath, prefixClean string) 
 		return "", fmt.Errorf("failed to save image: %w", err)
 	}
 
-	nav.Logger.Printf("Captcha image saved successfully to %s", outputPath)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Captcha image saved successfully to %s", outputPath)
+	}
 	return base64Data, nil
 }
 
 // MakeElementVisible changes the style display of an element to nil
 func (nav *Navigator) MakeElementVisible(selector string) error {
-	nav.Logger.Printf("Making CAPTCHA response field with selector: %s visible\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Making CAPTCHA response field with selector: %s visible\n", selector)
+	}
 	err := chromedp.Run(nav.Ctx,
 		chromedp.Evaluate(fmt.Sprintf(`document.querySelector('%s').style.display = ""`, selector), nil),
 	)
 	if err != nil {
-		nav.Logger.Printf("Error - Failed to make element visible: %v\n", err)
 		return fmt.Errorf("error - failed to make element visible: %v", err)
 	}
-	nav.Logger.Printf("Element with selector: %s is now visible\n", selector)
+	if nav.DebugLogger {
+		nav.Logger.Printf("Element with selector: %s is now visible\n", selector)
+	}
 	return nil
 }
 
@@ -1152,9 +1235,13 @@ func ParseStringToHtmlNode(pageSource string) (*html.Node, error) {
 //
 //	nav.Close()
 func (nav *Navigator) Close() {
-	// nav.Logger.Println("Closing the Navigator instance")
+	if nav.DebugLogger {
+		nav.Logger.Println("Closing the Navigator instance")
+	}
 	nav.Cancel()
-	nav.Logger.Println("Navigator instance closed successfully")
+	if nav.DebugLogger {
+		nav.Logger.Println("Navigator instance closed successfully")
+	}
 }
 
 // Request structure to hold user data

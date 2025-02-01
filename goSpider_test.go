@@ -631,6 +631,35 @@ func TestPrintHtml(t *testing.T) {
 
 }
 
+// TestParseStringToHtmlNode tests the ParseStringToHtmlNode function.
+func TestParseStringToHtmlNode(t *testing.T) {
+	// Sample HTML string to parse
+	htmlString := "<html><head></head><body><h1>Hello, World!</h1></body></html>"
+
+	// Call ParseStringToHtmlNode to parse the HTML string
+	node, err := ParseStringToHtmlNode(htmlString)
+	if err != nil {
+		t.Errorf("ParseStringToHtmlNode error: %v", err)
+	}
+
+	// Ensure that the node is not nil
+	if node == nil {
+		t.Error("ParseStringToHtmlNode returned nil node")
+	}
+
+	// Check the node type of the root node
+	if node.Type != 2 {
+		t.Errorf("Expected ElementNode, got %v", node.Type)
+	}
+
+	// Check the first child node (which should be the 'html' element)
+	if node.FirstChild == nil {
+		t.Errorf("No child found for root node")
+	} else if node.FirstChild.Data != "html" {
+		t.Errorf("Expected root element 'html', got %v", node.FirstChild.Data)
+	}
+}
+
 func TestDatepicker(t *testing.T) {
 	nav := NewNavigator("", false)
 
@@ -660,7 +689,7 @@ func TestDatepicker(t *testing.T) {
 
 	start := time.Now()
 	for {
-		if time.Since(start) > time.Minute {
+		if time.Since(start) > 5*time.Second {
 			break
 		}
 	}

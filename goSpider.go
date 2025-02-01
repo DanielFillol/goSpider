@@ -1137,6 +1137,16 @@ func ParseHtmlToString(pageSource *html.Node) (string, error) {
 	return sb.String(), nil
 }
 
+// ParseStringToHtmlNode takes a string and returns an *html.Node
+func ParseStringToHtmlNode(pageSource string) (*html.Node, error) {
+	reader := strings.NewReader(pageSource)
+	node, err := html.Parse(reader)
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
 // Close closes the Navigator instance and releases resources.
 // Example:
 //

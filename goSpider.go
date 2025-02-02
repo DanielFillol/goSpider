@@ -1088,8 +1088,8 @@ func (nav *Navigator) SaveImageBase64(selector, outputPath, prefixClean string) 
 	return base64Data, nil
 }
 
-// MakeElementVisible changes the style display of an element to nil
-func (nav *Navigator) MakeElementVisible(selector string) error {
+// MakeCaptchaElementVisible changes the style display of an element to nil
+func (nav *Navigator) MakeCaptchaElementVisible(selector string) error {
 	if nav.DebugLogger {
 		nav.Logger.Printf("Making CAPTCHA response field with selector: %s visible\n", selector)
 	}
@@ -1099,6 +1099,18 @@ func (nav *Navigator) MakeElementVisible(selector string) error {
 	if err != nil {
 		return fmt.Errorf("error - failed to make element visible: %v", err)
 	}
+	if nav.DebugLogger {
+		nav.Logger.Printf("Element with selector: %s is now visible\n", selector)
+	}
+	return nil
+}
+
+// MakeElementVisible changes the style display of an element to nil
+func (nav *Navigator) MakeElementVisible(selector string) error {
+	if nav.DebugLogger {
+		nav.Logger.Printf("Making element with selector: %s visible\n", selector)
+	}
+
 	if nav.DebugLogger {
 		nav.Logger.Printf("Element with selector: %s is now visible\n", selector)
 	}

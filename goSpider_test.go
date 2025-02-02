@@ -587,15 +587,15 @@ func TestMakeElementVisible(t *testing.T) {
 		return
 	}
 
-	err = nav.MakeElementVisible("#h-captcha-response-" + id)
+	err = nav.MakeCaptchaElementVisible("#h-captcha-response-" + id)
 	if err != nil {
-		t.Errorf("MakeElementVisible error: %v", err)
+		t.Errorf("MakeCaptchaElementVisible error: %v", err)
 		return
 	}
 
 	err = nav.WaitForElement("#h-captcha-response-"+id, nav.Timeout)
 	if err != nil {
-		t.Errorf("MakeElementVisible error: %v", err)
+		t.Errorf("MakeCaptchaElementVisible error: %v", err)
 		return
 	}
 

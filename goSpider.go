@@ -1111,6 +1111,13 @@ func (nav *Navigator) MakeElementVisible(selector string) error {
 		nav.Logger.Printf("Making element with selector: %s visible\n", selector)
 	}
 
+	err := chromedp.Run(nav.Ctx,
+		chromedp.SetAttributeValue(selector, "type", ""),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to make element visible: %w", err)
+	}
+
 	if nav.DebugLogger {
 		nav.Logger.Printf("Element with selector: %s is now visible\n", selector)
 	}

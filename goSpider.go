@@ -1481,3 +1481,36 @@ func FindNodes(node *html.Node, nodeExpression string) ([]*html.Node, error) {
 	}
 	return nil, errors.New("could not find specified node")
 }
+
+// GetElementAttributeFromNode retrieves the value of a specified attribute from an element
+// located using an XPath expression within a given HTML node.
+// Parameters:
+// - node: The root HTML node to search within.
+// - xpathExpr: The XPath expression that identifies the target element.
+// - attribute: The attribute name whose value you want to retrieve.
+// Returns:
+// - The attribute value as a string.
+// - An error if the element or attribute cannot be found.
+func GetElementAttributeFromNode(node *html.Node, xpathExpr, attribute string) (string, error) {
+	// Locate the element using the provided XPath expression.
+	target := htmlquery.FindOne(node, xpathExpr)
+	if target == nil {
+		return "", fmt.Errorf("failed to find element for XPath: %s", xpathExpr)
+	}
+
+	// Retrieve the attribute's value.
+	// Option 1: using a loop to search through the node's attributes.
+	for _, attr := range target.Attr {
+		if attr.Key == attribute {
+			return attr.Val, nil
+		}
+	}
+
+	// Option 2: using htmlquery.SelectAttr (if you prefer a one-liner)
+	// value := htmlquery.SelectAttr(target, attribute)
+	// if value != "" {
+	//     return value, nil
+	// }
+
+	return "", fmt.Errorf("attribute %s not found in element", attribute)
+}

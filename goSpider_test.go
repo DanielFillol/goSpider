@@ -632,7 +632,6 @@ func TestPrintHtml(t *testing.T) {
 
 }
 
-// TestParseStringToHtmlNode tests the ParseStringToHtmlNode function.
 func TestParseStringToHtmlNode(t *testing.T) {
 	// Sample HTML string to parse
 	htmlString := "<html><head></head><body><h1>Hello, World!</h1></body></html>"
@@ -696,21 +695,40 @@ func TestDatepicker(t *testing.T) {
 	}
 }
 
-// Won't pass on test because 2FA requires input on the terminal by the user, for that reason alone the test will fail
-//// TestLoginGoogle tests google single logon
-//func TestLoginGoogle(t *testing.T) {
-//	profilePath := "/Users/USER_NAME/Library/Application Support/Google/Chrome/Profile 2\""
-//	nav := NewNavigator(profilePath)
-//	defer nav.Close()
-//
-//	err := nav.LoginWithGoogle("", "")
-//	if err != nil {
-//		t.Errorf("LoginWithGoogle error: %v", err)
-//	}
-//
-//}
+func TestGetElementAttributeFromNode(t *testing.T) {
+	nav := NewNavigator("", true)
+	nav.DebugLogger = false
 
-//Full Crawlers
+	err := nav.OpenURL("https://www.jusbrasil.com.br/jurisprudencia/busca?q=tjsp&dateFrom=2000-01-01&dateTo=2000-01-31")
+	if err != nil {
+		t.Errorf("OpenURL error: %v", err)
+		return
+	}
+
+	htmlContent, err := nav.GetPageSource()
+	if err != nil {
+		t.Fatalf("FetchHTML error: %v", err)
+	}
+	if htmlContent == nil {
+		t.Error("FetchHTML returned empty content")
+	}
+
+	nodes, err := FindNodes(htmlContent, "//*[@id=\"__next\"]/main/div[3]/div/div/div/section/ul/li")
+	if err != nil {
+		t.Errorf("FindNodes error: %v", err)
+	}
+
+	var elements []string
+	for _, node := range nodes {
+		element, err := GetElementAttributeFromNode(node, "div/div/div/article/div/div/div[1]/h2/a", "href")
+		if err != nil {
+			t.Errorf("GetElementAttributeFromNode error: %v on node: %v", err, node)
+		}
+		elements = append(elements, element)
+	}
+
+	log.Println(elements)
+}
 
 func TestParallelRequests(t *testing.T) {
 	users := []Request{

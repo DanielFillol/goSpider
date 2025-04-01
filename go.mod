@@ -1,6 +1,8 @@
 module github.com/DanielFillol/goSpider
 
-go 1.20
+go 1.23
+
+toolchain go1.23.5
 
 require (
 	github.com/antchfx/xpath v1.3.0

@@ -183,30 +183,78 @@ func (nav *Navigator) SwitchToDefaultContent() error {
 	return nil
 }
 
+// CheckPageTitle navigates to the provided URL and checks if the page title equals "Ah, não!".
+// It returns true if the error title is detected, otherwise false.
+func (nav *Navigator) CheckPageTitle(url string) (bool, error) {
+	var title string
+	// Run the navigation and title extraction actions.
+	err := chromedp.Run(nav.Ctx,
+		chromedp.Navigate(url),
+		chromedp.Title(&title),
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed to navigate or get title: %v", err)
+	}
+
+	// Optionally, log the title if DebugLogger is enabled.
+	if nav.DebugLogger {
+		nav.Logger.Printf("Page title: %s\n", title)
+	}
+
+	// Check if the title indicates the error.
+	if strings.TrimSpace(title) == "Ah, não!" {
+		return true, nil
+	}
+	return false, nil
+}
+
 // OpenURL opens the specified URL in the current browser context.
+// It will retry up to 3 times if the page title indicates an error ("Ah, não!").
 // Example:
 //
 //	err := nav.OpenURL("https://www.example.com")
 func (nav *Navigator) OpenURL(url string) error {
-	if nav.DebugLogger {
-		nav.Logger.Printf("Opening URL: %s\n", url)
-	}
-	err := chromedp.Run(nav.Ctx,
-		chromedp.Navigate(url),
-		chromedp.WaitReady("body"), // Ensures the page is fully loaded
-	)
-	if err != nil {
-		return fmt.Errorf("error - failed to open URL: %v", err)
+	const maxRetries = 3
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if nav.DebugLogger {
+			nav.Logger.Printf("Attempt %d: Opening URL: %s\n", attempt, url)
+		}
+		// Navigate to the URL and wait for the page's body to be ready.
+		err := chromedp.Run(nav.Ctx,
+			chromedp.Navigate(url),
+			chromedp.WaitReady("body"),
+		)
+		if err != nil {
+			return fmt.Errorf("error - failed to open URL: %v", err)
+		}
+
+		// Wait for the page load (this method may include additional checks as needed).
+		_, err = nav.WaitPageLoad()
+		if err != nil {
+			return err
+		}
+
+		// Check if the page title indicates the error "Ah, não!".
+		isError, err := nav.CheckPageTitle(url)
+		if err != nil {
+			return fmt.Errorf("error checking page title: %v", err)
+		}
+
+		if !isError {
+			if nav.DebugLogger {
+				nav.Logger.Printf("URL opened successfully with URL: %s\n", url)
+			}
+			return nil
+		}
+
+		// Log the retry if error detected
+		nav.Logger.Printf("Attempt %d: Detected error in page title. Retrying...\n", attempt)
+		// Optionally, wait a bit before retrying
+		time.Sleep(500 * time.Millisecond)
 	}
 
-	_, err = nav.WaitPageLoad()
-	if err != nil {
-		return err
-	}
-	if nav.DebugLogger {
-		nav.Logger.Printf("URL opened successfully with URL: %s\n", url)
-	}
-	return nil
+	return fmt.Errorf("failed to open URL %s after %d attempts", url, maxRetries)
 }
 
 // GetCurrentURL returns the current URL of the browser.

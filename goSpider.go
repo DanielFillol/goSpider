@@ -29,6 +29,7 @@ type Navigator struct {
 	DebugLogger bool
 	Timeout     time.Duration
 	Cookies     []*network.Cookie
+	QueryOption chromedp.QueryOption
 }
 
 // NewNavigator creates a new Navigator instance.
@@ -77,8 +78,9 @@ func NewNavigator(profilePath string, headless bool) *Navigator {
 			cancelCtx()
 			cancelAllocCtx()
 		},
-		Logger:  logger,
-		Cookies: []*network.Cookie{},
+		Logger:      logger,
+		Cookies:     []*network.Cookie{},
+		QueryOption: chromedp.ByQuery,
 	}
 
 	// Set standard timeout with enhanced logging
@@ -88,6 +90,19 @@ func NewNavigator(profilePath string, headless bool) *Navigator {
 	}
 
 	return navigator
+}
+
+// SetQueryType defines selector type (CSS ou XPath)
+func (nav *Navigator) SetQueryType(queryType chromedp.QueryOption) {
+	nav.QueryOption = queryType
+}
+
+func (nav *Navigator) UseXPath() {
+	nav.SetQueryType(chromedp.BySearch)
+}
+
+func (nav *Navigator) UseCSS() {
+	nav.SetQueryType(chromedp.ByQuery)
 }
 
 // SetTimeOut sets a timeout for all the waiting functions on the package. The standard timeout of the Navigator is 300 ms.
@@ -111,7 +126,7 @@ func (nav *Navigator) GetElementAttribute(selector, attribute string) (string, e
 	}
 
 	err = chromedp.Run(nav.Ctx,
-		chromedp.AttributeValue(selector, attribute, &value, nil),
+		chromedp.AttributeValue(selector, attribute, &value, nil, nav.QueryOption),
 	)
 	if err != nil {
 		return "", fmt.Errorf("error getting attribute %s: %v", attribute, err)
@@ -691,7 +706,7 @@ func (nav *Navigator) WaitForElement(selector string, timeout time.Duration) err
 	ctx, cancel := context.WithTimeout(nav.Ctx, timeout)
 	defer cancel()
 	err := chromedp.Run(ctx,
-		chromedp.WaitVisible(selector),
+		chromedp.WaitVisible(selector, nav.QueryOption),
 	)
 	if err != nil {
 		return fmt.Errorf("error - failed to wait for element: %v", err)
@@ -717,7 +732,7 @@ func (nav *Navigator) ClickButton(selector string) error {
 	}
 
 	err = chromedp.Run(nav.Ctx,
-		chromedp.Click(selector),
+		chromedp.Click(selector, nav.QueryOption),
 	)
 	if err != nil {
 		return fmt.Errorf("error - failed to click button: %v", err)
@@ -747,7 +762,7 @@ func (nav *Navigator) UnsafeClickButton(selector string) error {
 	}
 
 	err := chromedp.Run(nav.Ctx,
-		chromedp.Click(selector, chromedp.ByID),
+		chromedp.Click(selector, chromedp.ByID, nav.QueryOption),
 	)
 	if err != nil {
 		return fmt.Errorf("error - failed to click button: %v", err)
@@ -773,7 +788,7 @@ func (nav *Navigator) ClickElement(selector string) error {
 	}
 
 	err = chromedp.Run(nav.Ctx,
-		chromedp.Click(selector, chromedp.ByID),
+		chromedp.Click(selector, chromedp.ByID, nav.QueryOption),
 	)
 	if err != nil {
 		return fmt.Errorf("error - Failed chromedp.ByID chromedp error: %v", err)
@@ -800,7 +815,7 @@ func (nav *Navigator) CheckRadioButton(selector string) error {
 	}
 
 	err = chromedp.Run(nav.Ctx,
-		chromedp.Click(selector, chromedp.NodeVisible),
+		chromedp.Click(selector, chromedp.NodeVisible, nav.QueryOption),
 	)
 	if err != nil {
 		return fmt.Errorf("error - failed to select radio button: %v", err)
@@ -826,7 +841,7 @@ func (nav *Navigator) UncheckRadioButton(selector string) error {
 	}
 
 	err = chromedp.Run(nav.Ctx,
-		chromedp.RemoveAttribute(selector, "checked", chromedp.NodeVisible),
+		chromedp.RemoveAttribute(selector, "checked", chromedp.NodeVisible, nav.QueryOption),
 	)
 	if err != nil {
 		return fmt.Errorf("error - failed to uncheck radio button: %v", err)
@@ -852,7 +867,7 @@ func (nav *Navigator) FillField(selector string, value string) error {
 	}
 
 	err = chromedp.Run(nav.Ctx,
-		chromedp.SendKeys(selector, value, chromedp.ByQuery),
+		chromedp.SendKeys(selector, value, chromedp.ByQuery, nav.QueryOption),
 	)
 	if err != nil {
 		return fmt.Errorf("error - failed to fill field with selector: %v", err)
@@ -873,7 +888,7 @@ func (nav *Navigator) UnsafeFillField(selector string, value string) error {
 	}
 
 	err := chromedp.Run(nav.Ctx,
-		chromedp.SendKeys(selector, value, chromedp.ByQuery),
+		chromedp.SendKeys(selector, value, chromedp.ByQuery, nav.QueryOption),
 	)
 	if err != nil {
 		return fmt.Errorf("error - failed to fill field with selector: %v", err)
@@ -924,12 +939,12 @@ func (nav *Navigator) FillForm(selector string, data map[string]string) error {
 	}
 
 	tasks := []chromedp.Action{
-		chromedp.WaitVisible(selector),
+		chromedp.WaitVisible(selector, nav.QueryOption),
 	}
 	for field, value := range data {
 		tasks = append(tasks, chromedp.SetValue(fmt.Sprintf("%s [name=%s]", selector, field), value))
 	}
-	tasks = append(tasks, chromedp.Submit(selector))
+	tasks = append(tasks, chromedp.Submit(selector, nav.QueryOption))
 
 	err = chromedp.Run(nav.Ctx, tasks...)
 	if err != nil {
@@ -997,7 +1012,7 @@ func (nav *Navigator) SelectDropdown(selector, value string) error {
 	}
 
 	err = chromedp.Run(nav.Ctx,
-		chromedp.SetValue(selector, value, chromedp.NodeVisible),
+		chromedp.SetValue(selector, value, chromedp.NodeVisible, nav.QueryOption),
 	)
 	if err != nil {
 		return fmt.Errorf("error - failed to select dropdown option: %v", err)
@@ -1055,7 +1070,7 @@ func (nav *Navigator) GetElement(selector string) (string, error) {
 	}
 
 	err = chromedp.Run(nav.Ctx,
-		chromedp.Text(selector, &content, chromedp.ByQuery, chromedp.NodeVisible),
+		chromedp.Text(selector, &content, chromedp.ByQuery, chromedp.NodeVisible, nav.QueryOption),
 	)
 	if err != nil && err.Error() != "could not find node" {
 		return "", fmt.Errorf("error - failed to get element: %v", err)
@@ -1088,7 +1103,7 @@ func (nav *Navigator) SaveImageBase64(selector, outputPath, prefixClean string) 
 
 	// Run the tasks
 	err := chromedp.Run(nav.Ctx,
-		chromedp.AttributeValue(selector, "src", &imageData, nil),
+		chromedp.AttributeValue(selector, "src", &imageData, nil, nav.QueryOption),
 	)
 	if err != nil {
 		return "", fmt.Errorf("error - failed to get image data: %w", err)
@@ -1160,7 +1175,7 @@ func (nav *Navigator) MakeElementVisible(selector string) error {
 	}
 
 	err := chromedp.Run(nav.Ctx,
-		chromedp.SetAttributeValue(selector, "type", ""),
+		chromedp.SetAttributeValue(selector, "type", "", nav.QueryOption),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to make element visible: %w", err)
@@ -1205,7 +1220,7 @@ func (nav *Navigator) Datepicker(date, calendarButtonSelector, calendarButtonGoB
 
 	err = nav.ClickButton(calendarButtonSelector)
 	if err != nil {
-		return err
+		return fmt.Errorf("error selecting callendar button, err:%s", err)
 	}
 
 	i := 0
@@ -1222,17 +1237,17 @@ func (nav *Navigator) Datepicker(date, calendarButtonSelector, calendarButtonGoB
 
 	err = nav.WaitForElement(calendarButtonsTableXpath, time.Minute)
 	if err != nil {
-		return err
+		return fmt.Errorf("error waiting for element on: %s, error:%s", calendarButtonsTableXpath, err)
 	}
 
 	pageSource, err := nav.GetPageSource()
 	if err != nil {
-		return err
+		return fmt.Errorf("error - failed to get page source: %w", err)
 	}
 
 	tt, err := htmlquery.Find(pageSource, calendarButtonsTableXpath)
 	if err != nil {
-		return err
+		return fmt.Errorf("error - failed to find calendar buttons table on path: %s, err: %w", calendarButtonsTableXpath, err)
 	}
 
 	for k, node := range tt {

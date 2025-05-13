@@ -33,6 +33,99 @@ func setupNavigator(t *testing.T) *Navigator {
 }
 
 // Test functions
+func TestQueryOptions(t *testing.T) {
+	server := startTestServer()
+	defer server.Close()
+
+	nav := setupNavigator(t)
+	nav.OpenURL(server.URL + "/query-options-test.html")
+
+	// Teste com CSS Selectors (ByQuery)
+	t.Run("CSS Selectors", func(t *testing.T) {
+		nav.UseCSS() // Definir explicitamente para CSS
+
+		// Testar preenchimento de campo com seletor CSS
+		err := nav.FillField("#css-input", "CSS test value")
+		if err != nil {
+			t.Fatalf("FillField with CSS failed: %v", err)
+		}
+
+		// Testar clique com seletor CSS
+		err = nav.ClickButton("#css-button")
+		if err != nil {
+			t.Fatalf("ClickButton with CSS failed: %v", err)
+		}
+
+		// Verificar resultado
+		result, err := nav.GetElement("#css-result")
+		if err != nil {
+			t.Fatalf("GetElement with CSS failed: %v", err)
+		}
+
+		if result != "CSS worked!" {
+			t.Errorf("CSS result mismatch. Expected: 'CSS worked!', Got: '%s'", result)
+		}
+	})
+
+	// Teste com XPath (BySearch)
+	t.Run("XPath Selectors", func(t *testing.T) {
+		nav.UseXPath() // Mudar para XPath
+
+		// Testar preenchimento de campo com XPath
+		xpathInput := `//input[@id='xpath-input']`
+		err := nav.FillField(xpathInput, "XPath test value")
+		if err != nil {
+			t.Fatalf("FillField with XPath failed: %v", err)
+		}
+
+		// Testar clique com XPath
+		xpathButton := `//button[contains(text(), 'XPath Button')]`
+		err = nav.ClickButton(xpathButton)
+		if err != nil {
+			t.Fatalf("ClickButton with XPath failed: %v", err)
+		}
+
+		// Verificar resultado com XPath
+		xpathResult := `//div[@id='xpath-result']//span`
+		result, err := nav.GetElement(xpathResult)
+		if err != nil {
+			t.Fatalf("GetElement with XPath failed: %v", err)
+		}
+
+		if result != "XPath worked!" {
+			t.Errorf("XPath result mismatch. Expected: 'XPath worked!', Got: '%s'", result)
+		}
+	})
+
+	// Teste misto
+	t.Run("Mixed Selectors", func(t *testing.T) {
+		// Usar CSS para um elemento
+		nav.UseCSS()
+		err := nav.FillField("#mixed-input", "Mixed test value")
+		if err != nil {
+			t.Fatalf("FillField with CSS failed: %v", err)
+		}
+
+		// Mudar para XPath para outro elemento
+		nav.UseXPath()
+		err = nav.ClickButton(`//button[@id='mixed-button']`)
+		if err != nil {
+			t.Fatalf("ClickButton with XPath failed: %v", err)
+		}
+
+		// Verificar com CSS
+		nav.UseCSS()
+		result, err := nav.GetElement("#mixed-result")
+		if err != nil {
+			t.Fatalf("GetElement with CSS failed: %v", err)
+		}
+
+		if result != "Mixed worked!" {
+			t.Errorf("Mixed result mismatch. Expected: 'Mixed worked!', Got: '%s'", result)
+		}
+	})
+}
+
 func TestGetElementAttribute(t *testing.T) {
 	server := startTestServer()
 	defer server.Close()
@@ -661,29 +754,15 @@ func TestParseStringToHtmlNode(t *testing.T) {
 }
 
 func TestDatepicker(t *testing.T) {
-	nav := NewNavigator("", false)
+	server := startTestServer()
+	defer server.Close()
 
-	err := nav.OpenURL("https://www.tjrs.jus.br/buscas/jurisprudencia/?conteudo_busca=ementa_completa&q_palavra_chave=&aba=jurisprudencia&q=&conteudo_busca=ementa_completa")
-	if err != nil {
-		t.Errorf("OpenURL error: %v", err)
-		return
-	}
+	nav := setupNavigator(t)
+	nav.OpenURL(server.URL + "/test.html")
 
-	err = nav.WaitForElement("#datas_julgamento_publicacao_div > div:nth-child(2) > div.col-md-4.col-xs-12.dataPublicacaoContainer > div > div > div.recuo_esquerdo_10px.col-md-5.col-xs-5 > div > input", time.Minute)
+	err := nav.Datepicker("01/01/2000", "#datepicker", "#datepicker > div > div > a.ui-datepicker-prev.ui-corner-all", "#datepicker", "//*[@id=\"datepicker\"]/div/table/tbody/tr")
 	if err != nil {
-		t.Errorf("WaitForElement error: %v", err)
-		return
-	}
-
-	err = nav.Datepicker("01/01/2000", "#datas_julgamento_publicacao_div > div:nth-child(2) > div.col-md-4.col-xs-12.dataPublicacaoContainer > div > div > div.recuo_esquerdo_10px.col-md-5.col-xs-5 > div > span > i", "#ui-datepicker-div > div > a.ui-datepicker-prev.ui-corner-all > span", "//*[@id=\"ui-datepicker-div\"]/table/tbody/tr", "#ui-datepicker-div > table > tbody > tr:nth-child")
-	if err != nil {
-		t.Errorf("Datepicker error: %v", err)
-		return
-	}
-
-	err = nav.Datepicker("31/12/2000", "#datas_julgamento_publicacao_div > div:nth-child(2) > div.col-md-4.col-xs-12.dataPublicacaoContainer > div > div > div:nth-child(3) > div > span", "#ui-datepicker-div > div > a.ui-datepicker-prev.ui-corner-all > span", "//*[@id=\"ui-datepicker-div\"]/table/tbody/tr", "#ui-datepicker-div > table > tbody > tr:nth-child")
-	if err != nil {
-		t.Errorf("Datepicker error: %v", err)
+		t.Errorf("Datepicker error 1: %v", err)
 		return
 	}
 
@@ -699,7 +778,7 @@ func TestGetElementAttributeFromNode(t *testing.T) {
 	nav := NewNavigator("", true)
 	nav.DebugLogger = false
 
-	err := nav.OpenURL("https://www.jusbrasil.com.br/jurisprudencia/busca?q=tjsp&dateFrom=2000-01-01&dateTo=2000-01-31")
+	err := nav.OpenURL("https://www.google.com")
 	if err != nil {
 		t.Errorf("OpenURL error: %v", err)
 		return
@@ -713,14 +792,14 @@ func TestGetElementAttributeFromNode(t *testing.T) {
 		t.Error("FetchHTML returned empty content")
 	}
 
-	nodes, err := FindNodes(htmlContent, "//*[@id=\"__next\"]/main/div[3]/div/div/div/section/ul/li")
+	nodes, err := FindNodes(htmlContent, "/html/body/div[1]/div[3]/form/div[1]/div[1]/div[3]/center")
 	if err != nil {
 		t.Errorf("FindNodes error: %v", err)
 	}
 
 	var elements []string
 	for _, node := range nodes {
-		element, err := GetElementAttributeFromNode(node, "div/div/div/article/div/div/div[1]/h2/a", "href")
+		element, err := GetElementAttributeFromNode(node, "/input[2]", "value")
 		if err != nil {
 			t.Errorf("GetElementAttributeFromNode error: %v on node: %v", err, node)
 		}

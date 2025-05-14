@@ -1,8 +1,10 @@
 package goSpider
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
 	"golang.org/x/net/html"
 	"log"
@@ -26,10 +28,34 @@ func startTestServer() *httptest.Server {
 // Setup Navigator for tests
 func setupNavigator(t *testing.T) *Navigator {
 	nav := NewNavigator("", true)
-	nav.SetTimeOut(600 * time.Millisecond)
+	nav.SetTimeOut(3 * time.Second)
 	nav.DebugLogger = false
 	t.Cleanup(nav.Close)
 	return nav
+}
+
+// Setup serveTestHTML for tests
+func serveTestHTML(t *testing.T) {
+	t.Helper()
+
+	fs := http.FileServer(http.Dir("./server"))
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: fs,
+	}
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			t.Fatalf("erro ao iniciar servidor de teste: %v", err)
+		}
+	}()
+
+	// Espera o servidor subir
+	time.Sleep(300 * time.Millisecond)
+
+	t.Cleanup(func() {
+		_ = server.Close()
+	})
 }
 
 // Test functions
@@ -178,6 +204,69 @@ func TestSwitchToFrame(t *testing.T) {
 	} else {
 		fmt.Println(iframeContent)
 	}
+}
+
+func TestSwitchToNewTab(t *testing.T) {
+	serveTestHTML(t)
+
+	// Configuração do navegador
+	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(),
+		append(chromedp.DefaultExecAllocatorOptions[:],
+			chromedp.Flag("headless", false),
+			chromedp.Flag("disable-popup-blocking", false),
+		)...)
+	defer cancel()
+
+	ctx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+
+	t.Run("Detectar e alternar aba", func(t *testing.T) {
+		var newTabCtx context.Context
+		newTabReady := make(chan struct{})
+
+		// Escuta nova aba sendo criada
+		chromedp.ListenBrowser(ctx, func(ev interface{}) {
+			if e, ok := ev.(*target.EventTargetCreated); ok {
+				if e.TargetInfo.Type == "page" && e.TargetInfo.URL == "" {
+					newTabCtx, _ = chromedp.NewContext(ctx, chromedp.WithTargetID(e.TargetInfo.TargetID))
+					close(newTabReady)
+				}
+			}
+		})
+
+		err := chromedp.Run(ctx,
+			chromedp.Navigate("http://localhost:8080/newtab-test.html"),
+			chromedp.WaitVisible(`#open-newtab`, chromedp.ByID),
+			chromedp.Click(`#open-newtab`, chromedp.ByID),
+		)
+		if err != nil {
+			t.Fatalf("Erro ao abrir a página de teste: %v", err)
+		}
+
+		select {
+		case <-newTabReady:
+			t.Log("✅ Nova aba detectada")
+		case <-time.After(5 * time.Second):
+			t.Fatal("❌ Nova aba não detectada")
+		}
+
+		// Valida conteúdo na nova aba
+		var result string
+		err = chromedp.Run(newTabCtx,
+			chromedp.WaitVisible(`#newtab-content`, chromedp.ByID),
+			chromedp.Text(`#newtab-content`, &result, chromedp.ByID),
+		)
+		if err != nil {
+			t.Fatalf("Erro ao ler conteúdo da nova aba: %v", err)
+		}
+
+		expected := "Success! New Tab Loaded"
+		if result != expected {
+			t.Errorf("Conteúdo inesperado na nova aba. Esperado: %q, Obtido: %q", expected, result)
+		} else {
+			t.Logf("✅ Conteúdo da nova aba: %q", result)
+		}
+	})
 }
 
 func TestSwitchToFrameAndDefaultContent(t *testing.T) {

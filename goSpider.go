@@ -9,6 +9,7 @@ import (
 	"github.com/DanielFillol/goSpider/htmlQuery"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/page"
+	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
 	"golang.org/x/net/html"
 	"io/ioutil"
@@ -132,6 +133,58 @@ func (nav *Navigator) GetElementAttribute(selector, attribute string) (string, e
 		return "", fmt.Errorf("error getting attribute %s: %v", attribute, err)
 	}
 	return value, nil
+}
+
+// SwitchToNewTab returns the Navigator with a new context
+func (nav *Navigator) SwitchToNewTab() (*Navigator, error) {
+	ctx, cancel := context.WithTimeout(nav.Ctx, nav.Timeout)
+	defer cancel()
+
+	// Targets antes do clique
+	targetsBefore, err := chromedp.Targets(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error getting initial targets: %v", err)
+	}
+
+	// Esperar breve momento para permitir que nova aba seja criada
+	time.Sleep(500 * time.Millisecond)
+
+	// Targets após o clique
+	targetsAfter, err := chromedp.Targets(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error getting targets after click: %v", err)
+	}
+
+	var newTabID target.ID
+	for _, t := range targetsAfter {
+		if t.Type == "page" && !containsTarget(targetsBefore, t.TargetID) {
+			newTabID = t.TargetID
+			break
+		}
+	}
+
+	if newTabID == "" {
+		return nil, fmt.Errorf("failed to detect new tab: no new target found")
+	}
+
+	newCtx, _ := chromedp.NewContext(nav.Ctx, chromedp.WithTargetID(newTabID))
+
+	return &Navigator{
+		Ctx:         newCtx,
+		Cancel:      func() { chromedp.Cancel(newCtx) },
+		Logger:      nav.Logger,
+		DebugLogger: nav.DebugLogger,
+		Timeout:     nav.Timeout,
+		QueryOption: nav.QueryOption,
+	}, nil
+}
+func containsTarget(targets []*target.Info, id target.ID) bool {
+	for _, t := range targets {
+		if t.TargetID == id {
+			return true
+		}
+	}
+	return false
 }
 
 // SwitchToFrame switches the context to the specified iframe.

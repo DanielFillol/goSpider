@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Tab Test</title>
+</head>
+<body style="padding: 20px;">
+<h1>Main Page</h1>
+
+<!-- Botão para abrir nova aba -->
+<button id="open-newtab"
+        onclick="window.open('/newtab-target.html', '_blank')"
+        style="padding: 10px; margin: 10px; cursor: pointer;">
+    Open New Tab
+</button>
+
+<!-- Link alternativo caso o botão tenha problemas -->
+<a id="fallback-link" href="/newtab-target.html" target="_blank"
+   style="display: block; margin-top: 20px;">
+    Alternative Link
+</a>
+</body>
+</html>

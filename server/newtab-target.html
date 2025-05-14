@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New Tab Content</title>
+</head>
+<body>
+    <h1 id="newtab-content" style="color: green;">Success! New Tab Loaded</h1>
+    <p id="timestamp">Loaded at: <span id="time"></span></p>
+    <script>
+        document.getElementById('time').textContent = new Date().toLocaleTimeString();
+    </script>
+</body>
+</html>

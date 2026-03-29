@@ -5,7 +5,7 @@ go 1.23
 toolchain go1.23.5
 
 require (
-	github.com/antchfx/xpath v1.3.0
+	github.com/antchfx/xpath v1.3.6
 	github.com/chromedp/cdproto v0.0.0-20250126231910-1730200a0f74
 	github.com/chromedp/chromedp v0.12.1
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
